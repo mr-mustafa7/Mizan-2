@@ -64,3 +64,42 @@ output/             # Generated artifacts
 **Is:** A deterministic decision-support foundation you can demo to coordinators and extend later with retrieval or NLP.
 
 **Isn't:** An autonomous enrollment system or a medical device. All matches require human review.
+
+## Prometheux + Cursor (MCP plugin)
+
+This cloud agent **cannot** use your local MCP plugins. Connect Prometheux on **Cursor Desktop** (your machine):
+
+### 1. Install
+
+```bash
+pip install pipx && pipx ensurepath && pipx install prometheux-mcp
+which prometheux-mcp
+```
+
+### 2. Put credentials here
+
+Copy `.cursor/mcp.json.example` → `.cursor/mcp.json` (or `~/.cursor/mcp.json` for all projects):
+
+```json
+{
+  "mcpServers": {
+    "prometheux": {
+      "command": "/full/path/to/prometheux-mcp",
+      "args": ["--url", "https://api.prometheux.ai"],
+      "env": {
+        "PROMETHEUX_TOKEN": "your_token_here",
+        "PROMETHEUX_USERNAME": "your_username",
+        "PROMETHEUX_ORGANIZATION": "your_organization"
+      }
+    }
+  }
+}
+```
+
+Get token/username/org from **Prometheux account settings**. `.cursor/mcp.json` is gitignored — never commit it.
+
+### 3. Enable
+
+**Cursor Settings** → **Tools & MCP** → toggle **prometheux** on → open a **new chat**.
+
+Guide: https://docs.prometheux.ai/integrations/mcp/cursor
