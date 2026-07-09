@@ -1,1 +1,8 @@
-# No third-party dependencies required (stdlib only).
+# Mizan backend HTTP API
+fastapi>=0.139,<1.0
+uvicorn[standard]>=0.51,<1.0
+python-multipart>=0.0.9
+
+# The matching engine itself (mizan/ package) is pure standard library.
+# Test/dev only:
+#   pytest, httpx
