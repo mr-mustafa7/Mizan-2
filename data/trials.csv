@@ -1,0 +1,7 @@
+trial_id,title,phase,sponsor,therapeutic_area,status,enrollment_count,target_enrollment
+NCT001,EGFR Inhibitor Study NSCLC,Phase II,OncoPharma,lung cancer,recruiting,12,60
+NCT002,First-Line Immunotherapy NSCLC,Phase III,GlobalBio,lung cancer,recruiting,45,120
+NCT003,HER2 Targeted Breast Trial,Phase II,BreastCure,breast cancer,recruiting,8,40
+NCT004,Chemo-Naive EGFR Trial,Phase II,OncoPharma,lung cancer,recruiting,30,50
+NCT005,Advanced NSCLC Palliative,Phase II,CareOnc,lung cancer,recruiting,5,80
+NCT006,Completed Enrollment Trial,Phase III,DonePharma,lung cancer,completed,100,100
