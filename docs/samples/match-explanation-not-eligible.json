@@ -1,0 +1,103 @@
+{
+  "patient_id": "P001",
+  "trial_id": "NCT002",
+  "trial_title": "First-Line Immunotherapy NSCLC",
+  "tier": "NOT_ELIGIBLE",
+  "score": 0.0,
+  "soft_rules_met": 0,
+  "soft_rules_total": 1,
+  "location_bonus": 0.0,
+  "summary": "P001 is NOT ELIGIBLE for First-Line Immunotherapy NSCLC: 1 mandatory criteria failed (biomarker_egfr).",
+  "highlights": [
+    "3 of 4 hard gates passed",
+    "FAILED hard gate \u2014 biomarker_egfr: Marker positive - fails exclusion",
+    "0/1 preference criteria met"
+  ],
+  "decisive_factors": [
+    "biomarker_egfr: Marker positive - fails exclusion"
+  ],
+  "facts": [
+    {
+      "field_checked": "diagnosis",
+      "patient_value": "NSCLC adenocarcinoma",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C009",
+      "criterion_text": "NSCLC diagnosis required",
+      "reason": "Diagnosis matches"
+    },
+    {
+      "field_checked": "age",
+      "patient_value": "67",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C010",
+      "criterion_text": "Adults only",
+      "reason": "Age meets minimum"
+    },
+    {
+      "field_checked": "ecog",
+      "patient_value": "1",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C011",
+      "criterion_text": "ECOG 0-1 required",
+      "reason": "ECOG within limit"
+    },
+    {
+      "field_checked": "biomarker_egfr",
+      "patient_value": "L858R mutation",
+      "result": "NOT_MET",
+      "bar": "red",
+      "hard_gate": true,
+      "polarity": "exclusion",
+      "criterion_id": "C012",
+      "criterion_text": "EGFR mutant patients excluded",
+      "reason": "Marker positive - fails exclusion"
+    },
+    {
+      "field_checked": "prior_treatments",
+      "patient_value": "carboplatin;pemetrexed",
+      "result": "NOT_MET",
+      "bar": "red",
+      "hard_gate": false,
+      "polarity": "inclusion",
+      "criterion_id": "C013",
+      "criterion_text": "Treatment-naive preferred",
+      "reason": "Required prior treatment not found"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Data quality gate",
+      "detail": "Patient P001 is scoreable (diagnosis and ECOG on record)."
+    },
+    {
+      "step": 2,
+      "title": "Mandatory (hard) gates",
+      "detail": "3 passed, 1 failed, 0 unknown out of 4 mandatory criteria."
+    },
+    {
+      "step": 3,
+      "title": "Decisive factor",
+      "detail": "Rejected because: biomarker_egfr \u2014 Marker positive - fails exclusion."
+    },
+    {
+      "step": 4,
+      "title": "Preference scoring",
+      "detail": "Skipped \u2014 score is 0 for hard-gate failures."
+    },
+    {
+      "step": 5,
+      "title": "Tier assigned",
+      "detail": "NOT_ELIGIBLE (any hard gate NOT_MET \u2192 NOT_ELIGIBLE)."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+site_id,trial_id,site_name,city,country
+S001,NCT001,Mass General Cancer Center,Boston,USA
+S002,NCT001,Royal Marsden,London,UK
+S003,NCT002,Mass General Cancer Center,Boston,USA
+S004,NCT002,Guy's Hospital,London,UK
+S005,NCT003,Institut Curie,Paris,France
+S006,NCT003,Royal Marsden,London,UK
+S007,NCT004,Dubai Oncology Center,Dubai,UAE
+S008,NCT004,Mass General Cancer Center,Boston,USA
+S009,NCT005,Singapore General,Singapore,Singapore
+S010,NCT005,Guy's Hospital,London,UK

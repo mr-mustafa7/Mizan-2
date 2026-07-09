@@ -1,0 +1,706 @@
+% ============================================================================
+% Mizan clinical trial matching - full Prometheux Vadalog specification
+% Authoritative concepts: criterion_evaluation, pair_assessment, audit_trail
+% Legacy compatibility concepts: criterion_detail, gate_evaluation
+% ============================================================================
+
+% ------------------------------
+% INPUT BINDS (CSV)
+% ------------------------------
+@bind("patient_csv", "csv", "disk", "patient.csv").
+@bind("patient_fact_csv", "csv", "disk", "patient_fact.csv").
+@bind("clinical_trial_csv", "csv", "disk", "clinical_trial.csv").
+@bind("eligibility_criterion_csv", "csv", "disk", "eligibility_criterion.csv").
+@bind("site_csv", "csv", "disk", "site.csv").
+
+% ------------------------------
+% OUTPUT BINDS (PARQUET)
+% ------------------------------
+@output("patient_data_quality").
+@bind("patient_data_quality", "parquet", "disk/results", "patient_data_quality.parquet").
+
+@output("at_risk_trial").
+@bind("at_risk_trial", "parquet", "disk/results", "at_risk_trial.parquet").
+
+@output("criterion_detail").
+@bind("criterion_detail", "parquet", "disk/results", "criterion_detail.parquet").
+
+@output("gate_evaluation").
+@bind("gate_evaluation", "parquet", "disk/results", "gate_evaluation.parquet").
+
+@output("rejection_reason").
+@bind("rejection_reason", "parquet", "disk/results", "rejection_reason.parquet").
+
+@output("trial_summary").
+@bind("trial_summary", "parquet", "disk/results", "trial_summary.parquet").
+
+@output("coordinator_dashboard").
+@bind("coordinator_dashboard", "parquet", "disk/results", "coordinator_dashboard.parquet").
+
+@output("diagnosis_summary").
+@bind("diagnosis_summary", "parquet", "disk/results", "diagnosis_summary.parquet").
+
+@output("criterion_evaluation").
+@bind("criterion_evaluation", "parquet", "disk/results", "criterion_evaluation.parquet").
+
+@output("pair_assessment").
+@bind("pair_assessment", "parquet", "disk/results", "pair_assessment.parquet").
+
+@output("audit_trail").
+@bind("audit_trail", "parquet", "disk/results", "audit_trail.parquet").
+
+% ============================================================================
+% COMMON HELPERS
+% ============================================================================
+
+hasDiagnosisFact(Patient_id) :-
+    patient_fact_csv(Patient_id, V1, "diagnosis", V2, Str_value, V3, Negated, V4, V5),
+    Negated == #F,
+    Str_value != "".
+
+hasDiagnosisValue(Patient_id, Str_value) :-
+    patient_fact_csv(Patient_id, V1, "diagnosis", V2, Str_value, V3, Negated, V4, V5),
+    Negated == #F,
+    Str_value != "".
+
+hasEcogFact(Patient_id) :-
+    patient_fact_csv(Patient_id, V1, "ecog", Num_value, V2, V3, V4, V5, V6),
+    Num_value >= 0.
+
+hasEcogValue(Patient_id, Num_value) :-
+    patient_fact_csv(Patient_id, V1, "ecog", Num_value, V2, V3, V4, V5, V6),
+    Num_value >= 0.
+
+hasCancerStageValue(Patient_id, Stage) :-
+    patient_fact_csv(Patient_id, V1, "cancer_stage", V2, Stage, V3, V4, V5, V6),
+    Stage != "".
+
+hasMarkerFact(Patient_id, Marker_field) :-
+    patient_fact_csv(Patient_id, V1, Marker_field, V2, V3, V4, V5, V6, V7),
+    contains(Marker_field, "biomarker_").
+
+markerNegated(Patient_id, Marker_field) :-
+    patient_fact_csv(Patient_id, V1, Marker_field, V2, V3, V4, Negated, V5, V6),
+    contains(Marker_field, "biomarker_"),
+    Negated == #T.
+
+markerNegativeValue("wild type").
+markerNegativeValue("negative").
+markerNegativeValue("not detected").
+
+markerNegativeFact(Patient_id, Marker_field) :-
+    patient_fact_csv(Patient_id, V1, Marker_field, V2, Str_value, V3, Negated, V4, V5),
+    contains(Marker_field, "biomarker_"),
+    Negated == #F,
+    markerNegativeValue(Str_value).
+
+markerPositiveFact(Patient_id, Marker_field) :-
+    patient_fact_csv(Patient_id, V1, Marker_field, V2, Str_value, V3, Negated, V4, V5),
+    contains(Marker_field, "biomarker_"),
+    Negated == #F,
+    Str_value != "",
+    Str_value != "wild type",
+    Str_value != "negative",
+    Str_value != "not detected".
+
+hasAnyPriorTreatmentsFact(Patient_id) :-
+    patient_fact_csv(Patient_id, V1, "prior_treatments", V2, V3, V4, V5, V6, V7).
+
+hasRealPriorTreatments(Patient_id, Str_value) :-
+    patient_fact_csv(Patient_id, V1, "prior_treatments", V2, Str_value, V3, V4, V5, V6),
+    Str_value != "",
+    Str_value != "none".
+
+hasOnlyNonePriorTreatments(Patient_id) :-
+    hasAnyPriorTreatmentsFact(Patient_id),
+    ~hasRealPriorTreatments(Patient_id, V1).
+
+priorTreatmentContains(Patient_id, Value) :-
+    hasRealPriorTreatments(Patient_id, Str_value),
+    contains(Str_value, Value).
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "age",
+    Rule_type == "inclusion",
+    Operator == "ge".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "age",
+    Rule_type == "inclusion",
+    Operator == "le".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "ecog",
+    Rule_type == "inclusion",
+    Operator == "le".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "diagnosis",
+    Rule_type == "inclusion",
+    Operator == "contains".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "cancer_stage",
+    Rule_type == "inclusion",
+    Operator == "contains".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    contains(Field_checked, "biomarker_"),
+    Rule_type == "inclusion",
+    Operator == "positive".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    contains(Field_checked, "biomarker_"),
+    Rule_type == "exclusion",
+    Operator == "positive".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "prior_treatments",
+    Rule_type == "inclusion",
+    Operator == "contains".
+
+supported_criterion(Criterion_id, Trial_id, Rule_type, Field_checked, Operator, Value, Hard_gate, Criterion_text) :-
+    eligibility_criterion_csv(Criterion_id, Trial_id, Rule_type, V1, Field_checked, Operator, Value, V2, V3, V4, Hard_gate, Criterion_text),
+    Field_checked == "prior_treatments",
+    Rule_type == "exclusion",
+    Operator == "contains".
+
+trial_with_supported_criterion(Trial_id, Title) :-
+    clinical_trial_csv(Trial_id, Title, V1, V2, V3, "recruiting", V4, V5),
+    supported_criterion(V6, Trial_id, V7, V8, V9, V10, V11, V12).
+
+pair_candidate(Patient_id, Trial_id, Title) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    trial_with_supported_criterion(Trial_id, Title).
+
+% ============================================================================
+% 1) patient_data_quality
+% ============================================================================
+
+patient_data_quality(Patient_id, Age, Sex, City, Country, DiagValue, EcogNum, "none", "YES") :-
+    patient_csv(Patient_id, Age, Sex, City, Country),
+    hasDiagnosisValue(Patient_id, DiagValue),
+    hasEcogValue(Patient_id, EcogNum).
+
+patient_data_quality(Patient_id, Age, Sex, City, Country, "MISSING", EcogNum, "diagnosis", "NO - EXCLUDED MISSING DATA") :-
+    patient_csv(Patient_id, Age, Sex, City, Country),
+    ~hasDiagnosisValue(Patient_id, V1),
+    hasEcogValue(Patient_id, EcogNum).
+
+patient_data_quality(Patient_id, Age, Sex, City, Country, DiagValue, -1, "ecog", "NO - EXCLUDED MISSING DATA") :-
+    patient_csv(Patient_id, Age, Sex, City, Country),
+    hasDiagnosisValue(Patient_id, DiagValue),
+    ~hasEcogValue(Patient_id, V1).
+
+patient_data_quality(Patient_id, Age, Sex, City, Country, "MISSING", -1, "diagnosis,ecog", "NO - EXCLUDED MISSING DATA") :-
+    patient_csv(Patient_id, Age, Sex, City, Country),
+    ~hasDiagnosisValue(Patient_id, V1),
+    ~hasEcogValue(Patient_id, V2).
+
+% ============================================================================
+% 2) at_risk_trial
+% ============================================================================
+
+at_risk_trial(Trial_id, Title, Therapeutic_area, Phase, Sponsor, Enrollment_count, Target_enrollment, Shortfall, Fill_pct) :-
+    clinical_trial_csv(Trial_id, Title, Phase, Sponsor, Therapeutic_area, Status, Enrollment_count, Target_enrollment),
+    Status == "recruiting",
+    Target_enrollment > 0,
+    Enrollment_count < Target_enrollment / 2,
+    Shortfall = Target_enrollment - Enrollment_count,
+    Fill_pct = (Enrollment_count * 100) / Target_enrollment.
+
+@post("at_risk_trial", "orderby(8,-1)").
+
+% ============================================================================
+% 9) criterion_evaluation (authoritative)
+% Result is MET / NOT_MET / UNKNOWN
+% ============================================================================
+
+% ---------- age ge inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "age", "ge", Value, "inclusion", Hard_gate, "MET", "Age meets minimum", Criterion_text) :-
+    patient_csv(Patient_id, Age, V1, V2, V3),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "age", "ge", Value, Hard_gate, Criterion_text),
+    Threshold = as_int(Value),
+    Age >= Threshold.
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "age", "ge", Value, "inclusion", Hard_gate, "NOT_MET", "Age below minimum", Criterion_text) :-
+    patient_csv(Patient_id, Age, V1, V2, V3),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "age", "ge", Value, Hard_gate, Criterion_text),
+    Threshold = as_int(Value),
+    Age < Threshold.
+
+% ---------- age le inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "age", "le", Value, "inclusion", Hard_gate, "MET", "Age within maximum", Criterion_text) :-
+    patient_csv(Patient_id, Age, V1, V2, V3),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "age", "le", Value, Hard_gate, Criterion_text),
+    Threshold = as_int(Value),
+    Age <= Threshold.
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "age", "le", Value, "inclusion", Hard_gate, "NOT_MET", "Age exceeds maximum", Criterion_text) :-
+    patient_csv(Patient_id, Age, V1, V2, V3),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "age", "le", Value, Hard_gate, Criterion_text),
+    Threshold = as_int(Value),
+    Age > Threshold.
+
+% ---------- ecog le inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "ecog", "le", Value, "inclusion", Hard_gate, "MET", "ECOG within limit", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "ecog", "le", Value, Hard_gate, Criterion_text),
+    hasEcogValue(Patient_id, Ecog_val),
+    Threshold = as_int(Value),
+    Ecog_val <= Threshold.
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "ecog", "le", Value, "inclusion", Hard_gate, "NOT_MET", "ECOG exceeds limit", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "ecog", "le", Value, Hard_gate, Criterion_text),
+    hasEcogValue(Patient_id, Ecog_val),
+    Threshold = as_int(Value),
+    Ecog_val > Threshold.
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "ecog", "le", Value, "inclusion", Hard_gate, "UNKNOWN", "No ECOG performance status on record", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "ecog", "le", Value, Hard_gate, Criterion_text),
+    ~hasEcogValue(Patient_id, V5).
+
+% ---------- diagnosis contains inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "diagnosis", "contains", Value, "inclusion", Hard_gate, "MET", "Diagnosis matches", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "diagnosis", "contains", Value, Hard_gate, Criterion_text),
+    hasDiagnosisValue(Patient_id, Diagnosis),
+    contains(Diagnosis, Value).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "diagnosis", "contains", Value, "inclusion", Hard_gate, "MET", "Diagnosis matches", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "diagnosis", "contains", Value, Hard_gate, Criterion_text),
+    hasDiagnosisValue(Patient_id, Diagnosis),
+    ~contains(Diagnosis, Value),
+    contains(Value, Diagnosis).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "diagnosis", "contains", Value, "inclusion", Hard_gate, "NOT_MET", "Diagnosis does not match", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "diagnosis", "contains", Value, Hard_gate, Criterion_text),
+    hasDiagnosisValue(Patient_id, Diagnosis),
+    ~contains(Diagnosis, Value),
+    ~contains(Value, Diagnosis).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "diagnosis", "contains", Value, "inclusion", Hard_gate, "UNKNOWN", "No diagnosis on record", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "diagnosis", "contains", Value, Hard_gate, Criterion_text),
+    ~hasDiagnosisValue(Patient_id, V5).
+
+% ---------- cancer_stage contains inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "cancer_stage", "contains", Value, "inclusion", Hard_gate, "MET", "Cancer stage matches", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "cancer_stage", "contains", Value, Hard_gate, Criterion_text),
+    hasCancerStageValue(Patient_id, Stage),
+    contains(Stage, Value).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "cancer_stage", "contains", Value, "inclusion", Hard_gate, "NOT_MET", "Cancer stage does not match", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "cancer_stage", "contains", Value, Hard_gate, Criterion_text),
+    hasCancerStageValue(Patient_id, Stage),
+    ~contains(Stage, Value).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "cancer_stage", "contains", Value, "inclusion", Hard_gate, "UNKNOWN", "No cancer stage on record", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "cancer_stage", "contains", Value, Hard_gate, Criterion_text),
+    ~hasCancerStageValue(Patient_id, V5).
+
+% ---------- biomarker_* positive inclusion ----------
+inclusionMarkerFail(Patient_id, Marker_field) :-
+    markerNegated(Patient_id, Marker_field).
+
+inclusionMarkerFail(Patient_id, Marker_field) :-
+    markerNegativeFact(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "inclusion", Hard_gate, "NOT_MET", "Marker explicitly absent - fails inclusion", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    inclusionMarkerFail(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "inclusion", Hard_gate, "MET", "Marker positive - meets inclusion", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    markerPositiveFact(Patient_id, Marker_field),
+    ~inclusionMarkerFail(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "inclusion", Hard_gate, "UNKNOWN", "No result on record for this marker", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    ~hasMarkerFact(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "inclusion", Hard_gate, "UNKNOWN", "No result on record for this marker", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    hasMarkerFact(Patient_id, Marker_field),
+    ~inclusionMarkerFail(Patient_id, Marker_field),
+    ~markerPositiveFact(Patient_id, Marker_field).
+
+% ---------- biomarker_* positive exclusion ----------
+exclusionMarkerPass(Patient_id, Marker_field) :-
+    markerNegated(Patient_id, Marker_field).
+
+exclusionMarkerPass(Patient_id, Marker_field) :-
+    markerNegativeFact(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "exclusion", Hard_gate, "MET", "Marker absent - passes exclusion", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    exclusionMarkerPass(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "exclusion", Hard_gate, "NOT_MET", "Marker positive - fails exclusion", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    markerPositiveFact(Patient_id, Marker_field),
+    ~exclusionMarkerPass(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "exclusion", Hard_gate, "UNKNOWN", "No result on record for this marker", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "exclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    ~hasMarkerFact(Patient_id, Marker_field).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, Marker_field, "positive", Value, "exclusion", Hard_gate, "UNKNOWN", "No result on record for this marker", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", Marker_field, "positive", Value, Hard_gate, Criterion_text),
+    hasMarkerFact(Patient_id, Marker_field),
+    ~exclusionMarkerPass(Patient_id, Marker_field),
+    ~markerPositiveFact(Patient_id, Marker_field).
+
+% ---------- prior_treatments contains exclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "exclusion", Hard_gate, "UNKNOWN", "No treatment history on record", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "exclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    ~hasAnyPriorTreatmentsFact(Patient_id).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "exclusion", Hard_gate, "MET", "Treatment-naive - passes exclusion", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    hasOnlyNonePriorTreatments(Patient_id).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "exclusion", Hard_gate, "NOT_MET", "Prior treatment found - excluded", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    priorTreatmentContains(Patient_id, Value).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "exclusion", Hard_gate, "MET", "Excluded treatment not found - passes", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "exclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    hasAnyPriorTreatmentsFact(Patient_id),
+    ~hasOnlyNonePriorTreatments(Patient_id),
+    ~priorTreatmentContains(Patient_id, Value).
+
+% ---------- prior_treatments contains inclusion ----------
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "inclusion", Hard_gate, "UNKNOWN", "No treatment history on record", Criterion_text) :-
+    patient_csv(Patient_id, V1, V2, V3, V4),
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    ~hasAnyPriorTreatmentsFact(Patient_id).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "inclusion", Hard_gate, "MET", "Required prior treatment found", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    priorTreatmentContains(Patient_id, Value).
+
+criterion_evaluation(Criterion_id, Patient_id, Trial_id, "prior_treatments", "contains", Value, "inclusion", Hard_gate, "NOT_MET", "Required prior treatment not found", Criterion_text) :-
+    supported_criterion(Criterion_id, Trial_id, "inclusion", "prior_treatments", "contains", Value, Hard_gate, Criterion_text),
+    hasAnyPriorTreatmentsFact(Patient_id),
+    ~priorTreatmentContains(Patient_id, Value).
+
+% ============================================================================
+% 11) audit_trail (authoritative, derived from criterion_evaluation)
+% ============================================================================
+
+audit_trail(Patient_id, Age, Sex, City, Trial_id, Criterion_id, Field_checked, Hard_gate, Result, Reason, Rule_text) :-
+    patient_csv(Patient_id, Age, Sex, City, V1),
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, Field_checked, V2, V3, V4, Hard_gate, Result, Reason, Rule_text).
+
+% ============================================================================
+% 10) pair_assessment (authoritative)
+% Tier: NOT_ELIGIBLE / NEEDS_SCREENING / ELIGIBLE / REVIEW
+% ============================================================================
+
+pair_hard_fail(Patient_id, Trial_id) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    criterion_evaluation(V2, Patient_id, Trial_id, V3, V4, V5, V6, Hard_gate, "NOT_MET", V7, V8),
+    Hard_gate == #T.
+
+pair_hard_unknown(Patient_id, Trial_id) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    criterion_evaluation(V2, Patient_id, Trial_id, V3, V4, V5, V6, Hard_gate, "UNKNOWN", V7, V8),
+    Hard_gate == #T.
+
+pair_soft_met_raw(Patient_id, Trial_id, Soft_met) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, V2, V3, V4, V5, Hard_gate, "MET", V6, V7),
+    Hard_gate == #F,
+    Soft_met = mcount(Criterion_id).
+
+pair_soft_total_raw(Patient_id, Trial_id, Soft_total) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, V2, V3, V4, V5, Hard_gate, V6, V7, V8),
+    Hard_gate == #F,
+    Soft_total = mcount(Criterion_id).
+
+pair_soft_met(Patient_id, Trial_id, Soft_met) :-
+    pair_soft_met_raw(Patient_id, Trial_id, Soft_met).
+
+pair_soft_met(Patient_id, Trial_id, 0) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_soft_met_raw(Patient_id, Trial_id, V2).
+
+pair_soft_total(Patient_id, Trial_id, Soft_total) :-
+    pair_soft_total_raw(Patient_id, Trial_id, Soft_total).
+
+pair_soft_total(Patient_id, Trial_id, 0) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_soft_total_raw(Patient_id, Trial_id, V2).
+
+pair_soft_pct(Patient_id, Trial_id, 100) :-
+    pair_soft_total(Patient_id, Trial_id, 0).
+
+pair_soft_pct(Patient_id, Trial_id, Soft_pct) :-
+    pair_soft_total(Patient_id, Trial_id, Soft_total),
+    pair_soft_met(Patient_id, Trial_id, Soft_met),
+    Soft_total > 0,
+    Raw_pct = (100 * Soft_met) / Soft_total,
+    Soft_pct = as_int(Raw_pct).
+
+pair_city_match(Patient_id, Trial_id) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    patient_csv(Patient_id, V2, V3, Patient_city, V4),
+    Patient_city != "",
+    site_csv(V5, Trial_id, V6, Site_city, V7),
+    Site_city == Patient_city.
+
+pair_country_match(Patient_id, Trial_id) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    patient_csv(Patient_id, V2, V3, V4, Patient_country),
+    Patient_country != "",
+    site_csv(V5, Trial_id, V6, V7, Site_country),
+    Site_country == Patient_country,
+    ~pair_city_match(Patient_id, Trial_id).
+
+pair_location_bonus(Patient_id, Trial_id, 0) :-
+    pair_hard_fail(Patient_id, Trial_id).
+
+pair_location_bonus(Patient_id, Trial_id, 25) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    pair_city_match(Patient_id, Trial_id).
+
+pair_location_bonus(Patient_id, Trial_id, 15) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    ~pair_city_match(Patient_id, Trial_id),
+    pair_country_match(Patient_id, Trial_id).
+
+pair_location_bonus(Patient_id, Trial_id, 0) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    ~pair_city_match(Patient_id, Trial_id),
+    ~pair_country_match(Patient_id, Trial_id).
+
+pair_score(Patient_id, Trial_id, 0) :-
+    pair_hard_fail(Patient_id, Trial_id).
+
+pair_score(Patient_id, Trial_id, Match_score) :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    pair_soft_pct(Patient_id, Trial_id, Soft_pct),
+    pair_location_bonus(Patient_id, Trial_id, Bonus),
+    Match_score = Soft_pct + Bonus.
+
+pair_tier(Patient_id, Trial_id, "NOT_ELIGIBLE") :-
+    pair_hard_fail(Patient_id, Trial_id).
+
+pair_tier(Patient_id, Trial_id, "NEEDS_SCREENING") :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    pair_hard_unknown(Patient_id, Trial_id).
+
+pair_tier(Patient_id, Trial_id, "ELIGIBLE") :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    ~pair_hard_unknown(Patient_id, Trial_id),
+    pair_soft_met(Patient_id, Trial_id, Soft_met),
+    pair_soft_total(Patient_id, Trial_id, Soft_total),
+    2 * Soft_met >= Soft_total.
+
+pair_tier(Patient_id, Trial_id, "REVIEW") :-
+    pair_candidate(Patient_id, Trial_id, V1),
+    ~pair_hard_fail(Patient_id, Trial_id),
+    ~pair_hard_unknown(Patient_id, Trial_id),
+    pair_soft_met(Patient_id, Trial_id, Soft_met),
+    pair_soft_total(Patient_id, Trial_id, Soft_total),
+    2 * Soft_met < Soft_total.
+
+pair_assessment(Patient_id, Trial_id, Title, Tier, Match_score, Soft_rules_met, Soft_rules_total, Location_bonus) :-
+    pair_candidate(Patient_id, Trial_id, Title),
+    pair_tier(Patient_id, Trial_id, Tier),
+    pair_score(Patient_id, Trial_id, Match_score),
+    pair_soft_met(Patient_id, Trial_id, Soft_rules_met),
+    pair_soft_total(Patient_id, Trial_id, Soft_rules_total),
+    pair_location_bonus(Patient_id, Trial_id, Location_bonus).
+
+@post("pair_assessment", "orderby(2,1,5,-1,1,1)").
+
+% ============================================================================
+% 3) criterion_detail (legacy compatibility)
+% Legacy status is PASS / FAIL / UNKNOWN, derived from criterion_evaluation
+% ============================================================================
+
+criterion_detail(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "PASS", Reason) :-
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "MET", Reason, V1).
+
+criterion_detail(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "FAIL", Reason) :-
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "NOT_MET", Reason, V1).
+
+criterion_detail(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "UNKNOWN", Reason) :-
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, Field_checked, Comparator, Value, Polarity, Hard_gate, "UNKNOWN", Reason, V1).
+
+% ============================================================================
+% 4) gate_evaluation (legacy compatibility)
+% Legacy tiers expected by older dashboards:
+% ELIGIBLE / REVIEW / INELIGIBLE
+% ============================================================================
+
+gate_evaluation(Patient_id, Trial_id, Title, "FAIL", 0, 0, 0, "INELIGIBLE") :-
+    pair_assessment(Patient_id, Trial_id, Title, "NOT_ELIGIBLE", V1, V2, V3, V4).
+
+gate_evaluation(Patient_id, Trial_id, Title, "PASS", Soft_pct, Bonus, Match_score, "ELIGIBLE") :-
+    pair_assessment(Patient_id, Trial_id, Title, "ELIGIBLE", Match_score, V1, V2, Bonus),
+    pair_soft_pct(Patient_id, Trial_id, Soft_pct).
+
+gate_evaluation(Patient_id, Trial_id, Title, "PASS", Soft_pct, Bonus, Match_score, "REVIEW") :-
+    pair_assessment(Patient_id, Trial_id, Title, "REVIEW", Match_score, V1, V2, Bonus),
+    pair_soft_pct(Patient_id, Trial_id, Soft_pct).
+
+gate_evaluation(Patient_id, Trial_id, Title, "PASS", Soft_pct, Bonus, Match_score, "REVIEW") :-
+    pair_assessment(Patient_id, Trial_id, Title, "NEEDS_SCREENING", Match_score, V1, V2, Bonus),
+    pair_soft_pct(Patient_id, Trial_id, Soft_pct).
+
+@post("gate_evaluation", "orderby(7,-1)").
+
+% ============================================================================
+% 5) rejection_reason
+% ============================================================================
+
+rejection_reason(Patient_id, Trial_id, Criterion_id, Field_checked, Hard_gate, Reason) :-
+    pair_assessment(Patient_id, Trial_id, V1, "NOT_ELIGIBLE", V2, V3, V4, V5),
+    criterion_evaluation(Criterion_id, Patient_id, Trial_id, Field_checked, V6, V7, V8, Hard_gate, "NOT_MET", Reason, V9),
+    Hard_gate == #T.
+
+% ============================================================================
+% 6) trial_summary
+% ============================================================================
+
+summary_trial(Trial_id, Trial_title) :-
+    pair_assessment(V1, Trial_id, Trial_title, V2, V3, V4, V5, V6).
+
+trial_eligible_count_raw(Trial_id, Trial_title, Eligible_count) :-
+    pair_assessment(Patient_id, Trial_id, Trial_title, "ELIGIBLE", V1, V2, V3, V4),
+    Eligible_count = mcount(Patient_id).
+
+trial_needs_screening_count_raw(Trial_id, Trial_title, Needs_screening_count) :-
+    pair_assessment(Patient_id, Trial_id, Trial_title, "NEEDS_SCREENING", V1, V2, V3, V4),
+    Needs_screening_count = mcount(Patient_id).
+
+trial_review_count_raw(Trial_id, Trial_title, Review_count) :-
+    pair_assessment(Patient_id, Trial_id, Trial_title, "REVIEW", V1, V2, V3, V4),
+    Review_count = mcount(Patient_id).
+
+trial_not_eligible_count_raw(Trial_id, Trial_title, Not_eligible_count) :-
+    pair_assessment(Patient_id, Trial_id, Trial_title, "NOT_ELIGIBLE", V1, V2, V3, V4),
+    Not_eligible_count = mcount(Patient_id).
+
+trial_eligible_count(Trial_id, Trial_title, Eligible_count) :-
+    trial_eligible_count_raw(Trial_id, Trial_title, Eligible_count).
+
+trial_eligible_count(Trial_id, Trial_title, 0) :-
+    summary_trial(Trial_id, Trial_title),
+    ~trial_eligible_count_raw(Trial_id, Trial_title, V1).
+
+trial_needs_screening_count(Trial_id, Trial_title, Needs_screening_count) :-
+    trial_needs_screening_count_raw(Trial_id, Trial_title, Needs_screening_count).
+
+trial_needs_screening_count(Trial_id, Trial_title, 0) :-
+    summary_trial(Trial_id, Trial_title),
+    ~trial_needs_screening_count_raw(Trial_id, Trial_title, V1).
+
+trial_review_count(Trial_id, Trial_title, Review_count) :-
+    trial_review_count_raw(Trial_id, Trial_title, Review_count).
+
+trial_review_count(Trial_id, Trial_title, 0) :-
+    summary_trial(Trial_id, Trial_title),
+    ~trial_review_count_raw(Trial_id, Trial_title, V1).
+
+trial_not_eligible_count(Trial_id, Trial_title, Not_eligible_count) :-
+    trial_not_eligible_count_raw(Trial_id, Trial_title, Not_eligible_count).
+
+trial_not_eligible_count(Trial_id, Trial_title, 0) :-
+    summary_trial(Trial_id, Trial_title),
+    ~trial_not_eligible_count_raw(Trial_id, Trial_title, V1).
+
+trial_summary(Trial_id, Trial_title, Eligible_count, Needs_screening_count, Review_count, Not_eligible_count) :-
+    summary_trial(Trial_id, Trial_title),
+    trial_eligible_count(Trial_id, Trial_title, Eligible_count),
+    trial_needs_screening_count(Trial_id, Trial_title, Needs_screening_count),
+    trial_review_count(Trial_id, Trial_title, Review_count),
+    trial_not_eligible_count(Trial_id, Trial_title, Not_eligible_count).
+
+@post("trial_summary", "orderby(1,1)").
+
+% ============================================================================
+% 7) coordinator_dashboard
+% ============================================================================
+
+dashboard_counts(Trial_id, Eligible_count, Needs_screening_count, Review_count) :-
+    trial_summary(Trial_id, V1, Eligible_count, Needs_screening_count, Review_count, V2).
+
+dashboard_counts(Trial_id, 0, 0, 0) :-
+    at_risk_trial(Trial_id, V1, V2, V3, V4, V5, V6, V7, V8),
+    ~trial_summary(Trial_id, V9, V10, V11, V12, V13).
+
+coordinator_dashboard(Trial_id, Title, Phase, Sponsor, Enrollment_count, Target_enrollment, Shortfall, Eligible_count, Needs_screening_count, Review_count) :-
+    at_risk_trial(Trial_id, Title, V1, Phase, Sponsor, Enrollment_count, Target_enrollment, Shortfall, V2),
+    dashboard_counts(Trial_id, Eligible_count, Needs_screening_count, Review_count).
+
+@post("coordinator_dashboard", "orderby(7,-1)").
+
+% ============================================================================
+% 8) diagnosis_summary
+% Distinct patient counts by diagnosis for ELIGIBLE and NEEDS_SCREENING
+% ============================================================================
+
+eligible_diagnosis_patient(Patient_id, Diagnosis) :-
+    pair_assessment(Patient_id, V1, V2, "ELIGIBLE", V3, V4, V5, V6),
+    hasDiagnosisValue(Patient_id, Diagnosis).
+
+screening_diagnosis_patient(Patient_id, Diagnosis) :-
+    pair_assessment(Patient_id, V1, V2, "NEEDS_SCREENING", V3, V4, V5, V6),
+    hasDiagnosisValue(Patient_id, Diagnosis).
+
+diagnosis_eligible_count_raw(Diagnosis, Eligible_patient_count) :-
+    eligible_diagnosis_patient(Patient_id, Diagnosis),
+    Eligible_patient_count = mcount(Patient_id).
+
+diagnosis_screening_count_raw(Diagnosis, Needs_screening_patient_count) :-
+    screening_diagnosis_patient(Patient_id, Diagnosis),
+    Needs_screening_patient_count = mcount(Patient_id).
+
+diagnosis_group(Diagnosis) :-
+    diagnosis_eligible_count_raw(Diagnosis, V1).
+
+diagnosis_group(Diagnosis) :-
+    diagnosis_screening_count_raw(Diagnosis, V1).
+
+diagnosis_eligible_count(Diagnosis, Eligible_patient_count) :-
+    diagnosis_eligible_count_raw(Diagnosis, Eligible_patient_count).
+
+diagnosis_eligible_count(Diagnosis, 0) :-
+    diagnosis_group(Diagnosis),
+    ~diagnosis_eligible_count_raw(Diagnosis, V1).
+
+diagnosis_screening_count(Diagnosis, Needs_screening_patient_count) :-
+    diagnosis_screening_count_raw(Diagnosis, Needs_screening_patient_count).
+
+diagnosis_screening_count(Diagnosis, 0) :-
+    diagnosis_group(Diagnosis),
+    ~diagnosis_screening_count_raw(Diagnosis, V1).
+
+diagnosis_summary(Diagnosis, Eligible_patient_count, Needs_screening_patient_count) :-
+    diagnosis_group(Diagnosis),
+    diagnosis_eligible_count(Diagnosis, Eligible_patient_count),
+    diagnosis_screening_count(Diagnosis, Needs_screening_patient_count).
+
+@post("diagnosis_summary", "orderby(2,-1)").

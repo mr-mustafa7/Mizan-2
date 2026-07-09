@@ -1,0 +1,29 @@
+criterion_id,trial_id,rule_type,sequence_num,field_checked,operator,value,unit,time_window,notes,hard_gate,criterion_text
+C001,NCT001,inclusion,1,diagnosis,contains,NSCLC,,,,true,Histologically confirmed NSCLC
+C002,NCT001,inclusion,2,age,ge,18,,,,true,Age 18 or older
+C003,NCT001,inclusion,3,age,le,75,,,,true,Age 75 or younger
+C004,NCT001,inclusion,4,ecog,le,2,,,,true,ECOG performance status 0-2
+C005,NCT001,inclusion,5,biomarker_egfr,positive,mutation,,,,true,Documented EGFR activating mutation required
+C006,NCT001,exclusion,6,prior_treatments,contains,osimertinib,,,,true,Prior osimertinib therapy excluded
+C007,NCT001,inclusion,7,cancer_stage,contains,Stage,,,,false,Cancer stage documented
+C008,NCT001,inclusion,8,lab_hemoglobin,ge,10,g/dL,,,false,Hemoglobin at least 10 g/dL
+C009,NCT002,inclusion,1,diagnosis,contains,NSCLC,,,,true,NSCLC diagnosis required
+C010,NCT002,inclusion,2,age,ge,18,,,,true,Adults only
+C011,NCT002,inclusion,3,ecog,le,1,,,,true,ECOG 0-1 required
+C012,NCT002,exclusion,4,biomarker_egfr,positive,mutation,,,,true,EGFR mutant patients excluded
+C013,NCT002,inclusion,5,prior_treatments,contains,none,,,,false,Treatment-naive preferred
+C014,NCT003,inclusion,1,diagnosis,contains,breast,,,,true,Breast cancer diagnosis
+C015,NCT003,inclusion,2,biomarker_her2,positive,positive,,,,true,HER2 positive required
+C016,NCT003,inclusion,3,ecog,le,2,,,,true,ECOG 0-2
+C017,NCT003,inclusion,4,age,ge,18,,,,true,Age 18+
+C018,NCT003,inclusion,5,lab_hemoglobin,ge,10,g/dL,,,false,Adequate hemoglobin
+C019,NCT004,inclusion,1,diagnosis,contains,NSCLC,,,,true,NSCLC required
+C020,NCT004,inclusion,2,biomarker_egfr,positive,mutation,,,,true,EGFR mutation required
+C021,NCT004,inclusion,3,prior_treatments,contains,none,,,,true,No prior systemic therapy
+C022,NCT004,inclusion,4,age,ge,18,,,,true,Adult patients
+C023,NCT004,inclusion,5,ecog,le,2,,,,false,ECOG 0-2 preferred
+C024,NCT005,inclusion,1,diagnosis,contains,NSCLC,,,,true,Advanced NSCLC
+C025,NCT005,inclusion,2,cancer_stage,contains,Stage IV,,,,true,Stage IV disease
+C026,NCT005,inclusion,3,ecog,le,2,,,,true,ECOG 0-2
+C027,NCT005,exclusion,4,age,ge,80,,,,true,Age 80 or older excluded
+C028,NCT005,inclusion,5,lab_hemoglobin,ge,9,g/dL,,,false,Hemoglobin at least 9 g/dL

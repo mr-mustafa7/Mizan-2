@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "prometheux": {
+      "command": "/FULL/PATH/TO/prometheux-mcp",
+      "args": ["--url", "https://api.prometheux.ai"],
+      "env": {
+        "PROMETHEUX_TOKEN": "your_token_here",
+        "PROMETHEUX_USERNAME": "your_username",
+        "PROMETHEUX_ORGANIZATION": "your_organization"
+      }
+    }
+  }
+}

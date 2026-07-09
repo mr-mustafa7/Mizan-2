@@ -1,0 +1,57 @@
+patient_id,fact_id,field_name,num_value,str_value,unit,negated,confidence,source
+P001,F001,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P001,F002,ecog,1,,,false,high,clinic_note
+P001,F003,cancer_stage,,Stage IIIB,,false,high,imaging
+P001,F004,biomarker_egfr,,L858R mutation,,false,high,molecular
+P001,F005,prior_treatments,,carboplatin;pemetrexed,,false,medium,onc_history
+P001,F006,lab_hemoglobin,11.2,g/dL,g/dL,false,high,lab
+P002,F007,diagnosis,,NSCLC squamous,,false,high,pathology
+P002,F008,ecog,0,,,false,high,clinic_note
+P002,F009,cancer_stage,,Stage IIIA,,false,high,imaging
+P002,F010,biomarker_egfr,,wild type,,false,high,molecular
+P002,F011,prior_treatments,,none,,false,high,onc_history
+P002,F012,lab_hemoglobin,13.5,g/dL,g/dL,false,high,lab
+P003,F013,diagnosis,,breast cancer HER2+,,false,high,pathology
+P003,F014,ecog,2,,,false,high,clinic_note
+P003,F015,cancer_stage,,Stage IV,,false,high,imaging
+P003,F016,biomarker_her2,,positive,,false,high,IHC
+P003,F017,prior_treatments,,trastuzumab,,false,medium,onc_history
+P003,F018,lab_hemoglobin,10.8,g/dL,g/dL,false,high,lab
+P004,F019,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P004,F020,ecog,1,,,false,high,clinic_note
+P004,F021,cancer_stage,,Stage IIB,,false,high,imaging
+P004,F022,biomarker_egfr,,exon 19 deletion,,false,high,molecular
+P004,F023,prior_treatments,,none,,false,high,onc_history
+P004,F024,lab_hemoglobin,12.4,g/dL,g/dL,false,high,lab
+P005,F025,diagnosis,,colorectal cancer,,false,high,pathology
+P005,F026,ecog,1,,,false,high,clinic_note
+P005,F027,cancer_stage,,Stage III,,false,high,imaging
+P005,F028,biomarker_kras,,G12D mutation,,false,high,molecular
+P005,F029,prior_treatments,,FOLFOX,,false,medium,onc_history
+P005,F030,lab_hemoglobin,11.9,g/dL,g/dL,false,high,lab
+P006,F031,diagnosis,,NSCLC adenocarcinoma,,false,medium,pathology
+P006,F032,ecog,1,,,false,high,clinic_note
+P006,F033,cancer_stage,,unknown,,false,low,imaging
+P006,F034,biomarker_egfr,,not detected,,false,medium,molecular
+P006,F035,prior_treatments,,none,,false,high,onc_history
+P007,F036,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P007,F037,ecog,0,,,false,high,clinic_note
+P007,F038,cancer_stage,,Stage IA,,false,high,imaging
+P007,F039,biomarker_egfr,,L861Q,,false,high,molecular
+P007,F040,prior_treatments,,none,,false,high,onc_history
+P008,F041,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P008,F042,ecog,3,,,false,high,clinic_note
+P008,F043,cancer_stage,,Stage IV,,false,high,imaging
+P008,F044,biomarker_egfr,,wild type,,false,high,molecular
+P008,F045,prior_treatments,,osimertinib,,false,high,onc_history
+P009,F046,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P009,F047,ecog,1,,,false,high,clinic_note
+P009,F048,cancer_stage,,Stage IIIA,,false,high,imaging
+P009,F049,prior_treatments,,none,,false,high,onc_history
+P010,F050,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P010,F051,cancer_stage,,Stage IIB,,false,high,imaging
+P010,F052,biomarker_egfr,,exon 19 deletion,,false,high,molecular
+P010,F053,prior_treatments,,none,,false,high,onc_history
+P011,F054,ecog,1,,,false,high,clinic_note
+P011,F055,biomarker_egfr,,L858R mutation,,false,high,molecular
+P011,F056,prior_treatments,,none,,false,high,onc_history

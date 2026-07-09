@@ -1,0 +1,12 @@
+patient_id,age,sex,city,country
+P001,67,F,Boston,USA
+P002,54,M,London,UK
+P003,72,F,Boston,USA
+P004,45,F,Dubai,UAE
+P005,61,M,London,UK
+P006,58,F,Paris,France
+P007,49,M,Boston,USA
+P008,76,F,Singapore,Singapore
+P009,63,M,Boston,USA
+P010,57,F,London,UK
+P011,70,M,Boston,USA
