@@ -2,3 +2,4 @@ reference/
 __pycache__/
 *.pyc
 output/
+.cursor/mcp.json
