@@ -121,12 +121,12 @@ def evaluate_criterion(
         threshold = int(float(criterion.value))
         if op == "ge":
             if patient.age >= threshold:
-                return EvaluationOutcome(CriterionResult.MET, "Age meets minimum", src)
-            return EvaluationOutcome(CriterionResult.NOT_MET, "Age below minimum", src)
+                return EvaluationOutcome(CriterionResult.MET, f"Age {patient.age} meets minimum {threshold}", src)
+            return EvaluationOutcome(CriterionResult.NOT_MET, f"Age {patient.age} below minimum {threshold}", src)
         if op == "le":
             if patient.age <= threshold:
-                return EvaluationOutcome(CriterionResult.MET, "Age within maximum", src)
-            return EvaluationOutcome(CriterionResult.NOT_MET, "Age exceeds maximum", src)
+                return EvaluationOutcome(CriterionResult.MET, f"Age {patient.age} meets maximum {threshold}", src)
+            return EvaluationOutcome(CriterionResult.NOT_MET, f"Age {patient.age} exceeds maximum {threshold}", src)
 
     # ---------- ECOG ----------
     if field == "ecog":
@@ -136,9 +136,10 @@ def evaluate_criterion(
             )
         ecog_val = next(f.num_value for f in _facts(data, patient_id, "ecog") if f.num_value is not None)
         threshold = int(float(criterion.value))
+        ecog_int = int(ecog_val)
         if ecog_val <= threshold:
-            return EvaluationOutcome(CriterionResult.MET, "ECOG within limit", src)
-        return EvaluationOutcome(CriterionResult.NOT_MET, "ECOG exceeds limit", src)
+            return EvaluationOutcome(CriterionResult.MET, f"ECOG {ecog_int} within limit {threshold}", src)
+        return EvaluationOutcome(CriterionResult.NOT_MET, f"ECOG {ecog_int} exceeds limit {threshold}", src)
 
     # ---------- DIAGNOSIS ----------
     if field == "diagnosis":
@@ -149,8 +150,8 @@ def evaluate_criterion(
         )
         val = criterion.value
         if _contains(diag, val) or _contains(val, diag):
-            return EvaluationOutcome(CriterionResult.MET, "Diagnosis matches", src)
-        return EvaluationOutcome(CriterionResult.NOT_MET, "Diagnosis does not match", src)
+            return EvaluationOutcome(CriterionResult.MET, f"Diagnosis '{diag}' matches required '{val}'", src)
+        return EvaluationOutcome(CriterionResult.NOT_MET, f"Diagnosis '{diag}' does not match required '{val}'", src)
 
     # ---------- CANCER STAGE ----------
     if field == "cancer_stage":
@@ -158,58 +159,60 @@ def evaluate_criterion(
             return EvaluationOutcome(CriterionResult.UNKNOWN, "No cancer stage on record", src)
         stage = next(f.str_value for f in _facts(data, patient_id, "cancer_stage") if f.str_value)
         if _contains(stage, criterion.value):
-            return EvaluationOutcome(CriterionResult.MET, "Cancer stage matches", src)
-        return EvaluationOutcome(CriterionResult.NOT_MET, "Cancer stage does not match", src)
+            return EvaluationOutcome(CriterionResult.MET, f"Cancer stage '{stage}' matches '{criterion.value}'", src)
+        return EvaluationOutcome(CriterionResult.NOT_MET, f"Cancer stage '{stage}' does not match '{criterion.value}'", src)
 
     # ---------- BIOMARKER positive ----------
     if field.startswith("biomarker_") and op == "positive":
+        marker = field[len("biomarker_"):].upper() or field.upper()
         if not _has_marker(data, patient_id, field):
             return EvaluationOutcome(
-                CriterionResult.UNKNOWN, "No result on record for this marker", src
+                CriterionResult.UNKNOWN, f"No {marker} result on record", src
             )
         facts = _facts(data, patient_id, field)
         if pol == "inclusion":
             for f in facts:
                 if f.negated:
                     return EvaluationOutcome(
-                        CriterionResult.NOT_MET, "Marker explicitly absent - fails inclusion", src
+                        CriterionResult.NOT_MET, f"{marker} explicitly absent - fails inclusion", src
                     )
             for f in facts:
                 if not f.negated:
                     sv = f.str_value.strip().lower()
                     if sv == "wild type":
                         return EvaluationOutcome(
-                            CriterionResult.NOT_MET, "Marker wild type - fails inclusion", src
+                            CriterionResult.NOT_MET, f"{marker} wild type - fails inclusion", src
                         )
                     if sv == "negative":
                         return EvaluationOutcome(
-                            CriterionResult.NOT_MET, "Marker negative - fails inclusion", src
+                            CriterionResult.NOT_MET, f"{marker} negative - fails inclusion", src
                         )
                     if sv == "not detected":
                         return EvaluationOutcome(
-                            CriterionResult.NOT_MET, "Marker not detected - fails inclusion", src
+                            CriterionResult.NOT_MET, f"{marker} not detected - fails inclusion", src
                         )
                     if sv and sv not in {"wild type", "negative", "not detected"}:
                         return EvaluationOutcome(
-                            CriterionResult.MET, "Marker positive - meets inclusion", src
+                            CriterionResult.MET, f"{marker} '{f.str_value}' positive - meets inclusion", src
                         )
-            return EvaluationOutcome(CriterionResult.UNKNOWN, "No result on record for this marker", src)
+            return EvaluationOutcome(CriterionResult.UNKNOWN, f"No {marker} result on record", src)
 
         # exclusion
         for f in facts:
             if f.negated:
-                return EvaluationOutcome(CriterionResult.MET, "Marker absent - passes exclusion", src)
+                return EvaluationOutcome(CriterionResult.MET, f"{marker} absent - passes exclusion", src)
         for f in facts:
             if not f.negated:
                 sv = f.str_value.strip().lower()
                 if sv in {"wild type", "negative", "not detected"}:
-                    return EvaluationOutcome(CriterionResult.MET, "Marker negative - passes exclusion", src)
+                    return EvaluationOutcome(CriterionResult.MET, f"{marker} {sv} - passes exclusion", src)
                 if sv and sv not in {"wild type", "negative", "not detected"}:
-                    return EvaluationOutcome(CriterionResult.NOT_MET, "Marker positive - fails exclusion", src)
-        return EvaluationOutcome(CriterionResult.UNKNOWN, "No result on record for this marker", src)
+                    return EvaluationOutcome(CriterionResult.NOT_MET, f"{marker} '{f.str_value}' positive - fails exclusion", src)
+        return EvaluationOutcome(CriterionResult.UNKNOWN, f"No {marker} result on record", src)
 
     # ---------- PRIOR TREATMENTS ----------
     if field == "prior_treatments":
+        val = criterion.value
         if pol == "exclusion":
             if not _has_prior_any(data, patient_id):
                 return EvaluationOutcome(
@@ -217,10 +220,10 @@ def evaluate_criterion(
                 )
             if not _has_prior_real(data, patient_id):
                 return EvaluationOutcome(CriterionResult.MET, "Treatment-naive - passes exclusion", src)
-            if _excluded_hit(data, patient_id, criterion.value):
-                return EvaluationOutcome(CriterionResult.NOT_MET, "Prior treatment found - excluded", src)
+            if _excluded_hit(data, patient_id, val):
+                return EvaluationOutcome(CriterionResult.NOT_MET, f"Prior '{val}' found - fails exclusion", src)
             return EvaluationOutcome(
-                CriterionResult.MET, "Excluded treatment not found - passes", src
+                CriterionResult.MET, f"Excluded treatment '{val}' not found - passes", src
             )
 
         # inclusion
@@ -228,9 +231,9 @@ def evaluate_criterion(
             return EvaluationOutcome(
                 CriterionResult.UNKNOWN, "No treatment history on record", src
             )
-        if _included_hit(data, patient_id, criterion.value):
-            return EvaluationOutcome(CriterionResult.MET, "Required prior treatment found", src)
-        return EvaluationOutcome(CriterionResult.NOT_MET, "Required prior treatment not found", src)
+        if _included_hit(data, patient_id, val):
+            return EvaluationOutcome(CriterionResult.MET, f"Required prior '{val}' found", src)
+        return EvaluationOutcome(CriterionResult.NOT_MET, f"Required prior '{val}' not found", src)
 
     return None
 

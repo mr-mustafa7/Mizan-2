@@ -69,6 +69,24 @@ class PatientTrialMatch:
 
 
 @dataclass(frozen=True)
+class PairAssessmentDetail:
+    """Full pair_assessment breakdown matching the frontend API contract."""
+
+    patient_id: str
+    trial_id: str
+    trial_title: str
+    tier: MatchTier
+    score: float
+    soft_rules_met: int
+    soft_rules_total: int
+    soft_rules_unknown: int
+    location_bonus: float
+    hard_failures: int
+    hard_unknowns: int
+    soft_failures: int
+
+
+@dataclass(frozen=True)
 class RejectionReason:
     patient_id: str
     trial_id: str
@@ -214,8 +232,10 @@ def build_audit_trail(data: MizanData, trial_ids: list[str] | None = None) -> li
     return records
 
 
-def match_patient_trial(data: MizanData, patient_id: str, trial_id: str) -> PatientTrialMatch | None:
-    """Score and classify one patient-trial pair (pair_assessment)."""
+def assess_pair_detail(
+    data: MizanData, patient_id: str, trial_id: str
+) -> PairAssessmentDetail | None:
+    """Single source of truth for pair_assessment, with full criterion counts."""
     trial = _trial_lookup(data, trial_id)
     patient = _patient_lookup(data, patient_id)
     if trial is None or patient is None:
@@ -225,20 +245,24 @@ def match_patient_trial(data: MizanData, patient_id: str, trial_id: str) -> Pati
     if not outcomes:
         return None
 
-    hard = [(c, o) for c, o in outcomes if c.hard_gate]
-    hard_fail = any(o.result == CriterionResult.NOT_MET for _, o in hard)
-    hard_unknown = any(o.result == CriterionResult.UNKNOWN for _, o in hard)
+    hard = [o for c, o in outcomes if c.hard_gate]
+    hard_failures = sum(1 for o in hard if o.result == CriterionResult.NOT_MET)
+    hard_unknowns = sum(1 for o in hard if o.result == CriterionResult.UNKNOWN)
 
-    soft = [(c, o) for c, o in outcomes if not c.hard_gate]
-    soft_met = sum(1 for _, o in soft if o.result == CriterionResult.MET)
+    soft = [o for c, o in outcomes if not c.hard_gate]
+    soft_met = sum(1 for o in soft if o.result == CriterionResult.MET)
+    soft_failures = sum(1 for o in soft if o.result == CriterionResult.NOT_MET)
+    soft_unknown = sum(1 for o in soft if o.result == CriterionResult.UNKNOWN)
     soft_total = len(soft)
 
+    hard_fail = hard_failures > 0
+    hard_unknown = hard_unknowns > 0
     tier = _classify_pair(hard_fail, hard_unknown, soft_met, soft_total)
     loc_bonus = 0 if hard_fail else _location_bonus(data, patient, trial_id)
     pct = _soft_pct(soft_met, soft_total)
     score = 0.0 if hard_fail else float(pct + loc_bonus)
 
-    return PatientTrialMatch(
+    return PairAssessmentDetail(
         patient_id=patient_id,
         trial_id=trial_id,
         trial_title=trial.title,
@@ -246,7 +270,28 @@ def match_patient_trial(data: MizanData, patient_id: str, trial_id: str) -> Pati
         score=score,
         soft_rules_met=soft_met,
         soft_rules_total=soft_total,
+        soft_rules_unknown=soft_unknown,
         location_bonus=float(loc_bonus),
+        hard_failures=hard_failures,
+        hard_unknowns=hard_unknowns,
+        soft_failures=soft_failures,
+    )
+
+
+def match_patient_trial(data: MizanData, patient_id: str, trial_id: str) -> PatientTrialMatch | None:
+    """Score and classify one patient-trial pair (pair_assessment)."""
+    detail = assess_pair_detail(data, patient_id, trial_id)
+    if detail is None:
+        return None
+    return PatientTrialMatch(
+        patient_id=detail.patient_id,
+        trial_id=detail.trial_id,
+        trial_title=detail.trial_title,
+        tier=detail.tier,
+        score=detail.score,
+        soft_rules_met=detail.soft_rules_met,
+        soft_rules_total=detail.soft_rules_total,
+        location_bonus=detail.location_bonus,
     )
 
 
