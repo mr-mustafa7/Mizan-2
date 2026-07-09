@@ -1,0 +1,142 @@
+{
+  "trial": {
+    "trial_id": "NCT001",
+    "title": "EGFR Inhibitor Study NSCLC",
+    "phase": "Phase II",
+    "sponsor": "OncoPharma",
+    "therapeutic_area": "lung cancer",
+    "status": "recruiting",
+    "enrollment_count": 12,
+    "target_enrollment": 60
+  },
+  "criteria": [
+    {
+      "criterion_id": "C001",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "1",
+      "field_checked": "diagnosis",
+      "operator": "contains",
+      "value": "NSCLC",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "Histologically confirmed NSCLC"
+    },
+    {
+      "criterion_id": "C002",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "2",
+      "field_checked": "age",
+      "operator": "ge",
+      "value": "18",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "Age 18 or older"
+    },
+    {
+      "criterion_id": "C003",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "3",
+      "field_checked": "age",
+      "operator": "le",
+      "value": "75",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "Age 75 or younger"
+    },
+    {
+      "criterion_id": "C004",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "4",
+      "field_checked": "ecog",
+      "operator": "le",
+      "value": "2",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "ECOG performance status 0-2"
+    },
+    {
+      "criterion_id": "C005",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "5",
+      "field_checked": "biomarker_egfr",
+      "operator": "positive",
+      "value": "mutation",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "Documented EGFR activating mutation required"
+    },
+    {
+      "criterion_id": "C006",
+      "trial_id": "NCT001",
+      "rule_type": "exclusion",
+      "sequence_num": "6",
+      "field_checked": "prior_treatments",
+      "operator": "contains",
+      "value": "osimertinib",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": true,
+      "criterion_text": "Prior osimertinib therapy excluded"
+    },
+    {
+      "criterion_id": "C007",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "7",
+      "field_checked": "cancer_stage",
+      "operator": "contains",
+      "value": "Stage",
+      "unit": "",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": false,
+      "criterion_text": "Cancer stage documented"
+    },
+    {
+      "criterion_id": "C008",
+      "trial_id": "NCT001",
+      "rule_type": "inclusion",
+      "sequence_num": "8",
+      "field_checked": "lab_hemoglobin",
+      "operator": "ge",
+      "value": "10",
+      "unit": "g/dL",
+      "time_window": "",
+      "notes": "",
+      "hard_gate": false,
+      "criterion_text": "Hemoglobin at least 10 g/dL"
+    }
+  ],
+  "sites": [
+    {
+      "site_id": "S001",
+      "trial_id": "NCT001",
+      "site_name": "Mass General Cancer Center",
+      "city": "Boston",
+      "country": "USA"
+    },
+    {
+      "site_id": "S002",
+      "trial_id": "NCT001",
+      "site_name": "Royal Marsden",
+      "city": "London",
+      "country": "UK"
+    }
+  ]
+}

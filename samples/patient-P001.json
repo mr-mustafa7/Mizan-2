@@ -1,0 +1,77 @@
+{
+  "patient": {
+    "patient_id": "P001",
+    "age": 67,
+    "sex": "F",
+    "city": "Boston",
+    "country": "USA"
+  },
+  "facts": [
+    {
+      "patient_id": "P001",
+      "fact_id": "F001",
+      "field_name": "diagnosis",
+      "num_value": "",
+      "str_value": "NSCLC adenocarcinoma",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "pathology"
+    },
+    {
+      "patient_id": "P001",
+      "fact_id": "F002",
+      "field_name": "ecog",
+      "num_value": 1.0,
+      "str_value": "",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "clinic_note"
+    },
+    {
+      "patient_id": "P001",
+      "fact_id": "F003",
+      "field_name": "cancer_stage",
+      "num_value": "",
+      "str_value": "Stage IIIB",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "imaging"
+    },
+    {
+      "patient_id": "P001",
+      "fact_id": "F004",
+      "field_name": "biomarker_egfr",
+      "num_value": "",
+      "str_value": "L858R mutation",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "molecular"
+    },
+    {
+      "patient_id": "P001",
+      "fact_id": "F005",
+      "field_name": "prior_treatments",
+      "num_value": "",
+      "str_value": "carboplatin;pemetrexed",
+      "unit": "",
+      "negated": false,
+      "confidence": "medium",
+      "source": "onc_history"
+    },
+    {
+      "patient_id": "P001",
+      "fact_id": "F006",
+      "field_name": "lab_hemoglobin",
+      "num_value": 11.2,
+      "str_value": "g/dL",
+      "unit": "g/dL",
+      "negated": false,
+      "confidence": "high",
+      "source": "lab"
+    }
+  ]
+}
