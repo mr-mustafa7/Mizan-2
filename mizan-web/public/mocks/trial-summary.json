@@ -1,0 +1,50 @@
+[
+  {
+    "trial_id": "NCT001",
+    "trial_title": "EGFR Inhibitor Study NSCLC",
+    "eligible_count": 2,
+    "needs_screening_count": 1,
+    "review_count": 0,
+    "not_eligible_count": 5
+  },
+  {
+    "trial_id": "NCT002",
+    "trial_title": "First-Line Immunotherapy NSCLC",
+    "eligible_count": 2,
+    "needs_screening_count": 0,
+    "review_count": 0,
+    "not_eligible_count": 6
+  },
+  {
+    "trial_id": "NCT003",
+    "trial_title": "HER2 Targeted Breast Trial",
+    "eligible_count": 1,
+    "needs_screening_count": 0,
+    "review_count": 0,
+    "not_eligible_count": 7
+  },
+  {
+    "trial_id": "NCT004",
+    "trial_title": "Chemo-Naive EGFR Trial",
+    "eligible_count": 2,
+    "needs_screening_count": 0,
+    "review_count": 0,
+    "not_eligible_count": 6
+  },
+  {
+    "trial_id": "NCT005",
+    "trial_title": "Advanced NSCLC Palliative",
+    "eligible_count": 0,
+    "needs_screening_count": 1,
+    "review_count": 0,
+    "not_eligible_count": 7
+  },
+  {
+    "trial_id": "NCT006",
+    "trial_title": "Completed Enrollment Trial",
+    "eligible_count": 8,
+    "needs_screening_count": 0,
+    "review_count": 0,
+    "not_eligible_count": 0
+  }
+]

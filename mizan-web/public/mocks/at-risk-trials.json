@@ -1,0 +1,46 @@
+[
+  {
+    "trial_id": "NCT002",
+    "title": "First-Line Immunotherapy NSCLC",
+    "therapeutic_area": "lung cancer",
+    "phase": "Phase III",
+    "sponsor": "GlobalBio",
+    "enrollment_count": 45,
+    "target_enrollment": 120,
+    "shortfall": 75,
+    "fill_pct": 37.5
+  },
+  {
+    "trial_id": "NCT005",
+    "title": "Advanced NSCLC Palliative",
+    "therapeutic_area": "lung cancer",
+    "phase": "Phase II",
+    "sponsor": "CareOnc",
+    "enrollment_count": 5,
+    "target_enrollment": 80,
+    "shortfall": 75,
+    "fill_pct": 6.2
+  },
+  {
+    "trial_id": "NCT001",
+    "title": "EGFR Inhibitor Study NSCLC",
+    "therapeutic_area": "lung cancer",
+    "phase": "Phase II",
+    "sponsor": "OncoPharma",
+    "enrollment_count": 12,
+    "target_enrollment": 60,
+    "shortfall": 48,
+    "fill_pct": 20.0
+  },
+  {
+    "trial_id": "NCT003",
+    "title": "HER2 Targeted Breast Trial",
+    "therapeutic_area": "breast cancer",
+    "phase": "Phase II",
+    "sponsor": "BreastCure",
+    "enrollment_count": 8,
+    "target_enrollment": 40,
+    "shortfall": 32,
+    "fill_pct": 20.0
+  }
+]

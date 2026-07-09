@@ -1,0 +1,98 @@
+[
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C001",
+    "field_checked": "diagnosis",
+    "rule_type": "inclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "Diagnosis 'NSCLC adenocarcinoma' matches required 'NSCLC'",
+    "patient_info": "diagnosis=NSCLC adenocarcinoma",
+    "criterion_text": "Histologically confirmed NSCLC"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C002",
+    "field_checked": "age",
+    "rule_type": "inclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "Age 67 meets minimum 18",
+    "patient_info": "age=67",
+    "criterion_text": "Age 18 or older"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C003",
+    "field_checked": "age",
+    "rule_type": "inclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "Age 67 meets maximum 75",
+    "patient_info": "age=67",
+    "criterion_text": "Age 75 or younger"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C004",
+    "field_checked": "ecog",
+    "rule_type": "inclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "ECOG 1 is within limit 2",
+    "patient_info": "field=ecog, num_value=1.0, confidence=high",
+    "criterion_text": "ECOG performance status 0-2"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C005",
+    "field_checked": "biomarker_egfr",
+    "rule_type": "inclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "biomarker_egfr is positive/mutated as required",
+    "patient_info": "field=biomarker_egfr, str_value=L858R mutation, confidence=high",
+    "criterion_text": "Documented EGFR activating mutation required"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C006",
+    "field_checked": "prior_treatments",
+    "rule_type": "exclusion",
+    "hard_gate": true,
+    "result": "MET",
+    "reason": "Prior treatments 'carboplatin;pemetrexed' do not include excluded 'osimertinib'",
+    "patient_info": "field=prior_treatments, str_value=carboplatin;pemetrexed, confidence=medium",
+    "criterion_text": "Prior osimertinib therapy excluded"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C007",
+    "field_checked": "cancer_stage",
+    "rule_type": "inclusion",
+    "hard_gate": false,
+    "result": "MET",
+    "reason": "Cancer stage 'Stage IIIB' contains required 'Stage'",
+    "patient_info": "field=cancer_stage, str_value=Stage IIIB, confidence=high",
+    "criterion_text": "Cancer stage documented"
+  },
+  {
+    "patient_id": "P001",
+    "trial_id": "NCT001",
+    "criterion_id": "C008",
+    "field_checked": "lab_hemoglobin",
+    "rule_type": "inclusion",
+    "hard_gate": false,
+    "result": "MET",
+    "reason": "lab_hemoglobin 11.2 meets minimum 10.0",
+    "patient_info": "field=lab_hemoglobin, num_value=11.2, str_value=g/dL, confidence=high",
+    "criterion_text": "Hemoglobin at least 10 g/dL"
+  }
+]
