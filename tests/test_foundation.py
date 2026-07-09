@@ -3,10 +3,10 @@
 import unittest
 
 from mizan.architecture import Layer
-from mizan.evaluator import CriterionResult, evaluate_criterion
+from mizan.evaluator import CriterionResult, evaluate_criterion, is_supported_criterion
 from mizan.loader import EligibilityCriterion, MizanData, Patient, PatientFact, Trial
 from mizan.matcher import MatchTier, match_patient_trial
-from mizan.scoring import composite_score
+from mizan.quality import build_patient_data_quality
 from mizan.stages import stage_ingest, stage_prefilter
 
 
@@ -20,19 +20,18 @@ class FoundationTests(unittest.TestCase):
         self.assertGreater(len(trial_ids), 0)
         self.assertEqual(prefilter.layer, Layer.PREFILTER)
 
-    def test_composite_score_excludes_unknown(self) -> None:
+    def test_patient_data_quality_gate(self) -> None:
+        data, _ = stage_ingest("data")
+        quality = build_patient_data_quality(data)
+        self.assertEqual(len(quality), len(data.patients))
+        scoreable = [q for q in quality if q.scoreable == "YES"]
+        self.assertGreater(len(scoreable), 0)
+
+    def test_lab_criterion_not_in_vadalog(self) -> None:
         criterion = EligibilityCriterion(
-            "C1", "T1", "inclusion", "age", "ge", "18", True, "Adult"
+            "C1", "T1", "inclusion", "lab_hemoglobin", "ge", "10", False, "Hgb"
         )
-        outcomes = [
-            (
-                criterion,
-                type("O", (), {"result": CriterionResult.MET, "reason": "", "patient_info": ""})(),
-            )
-        ]
-        score = composite_score(outcomes)
-        self.assertEqual(score.inclusion_score, 100.0)
-        self.assertEqual(score.composite_score, 100.0)
+        self.assertFalse(is_supported_criterion(criterion))
 
     def test_wild_type_is_not_met_for_egfr_inclusion(self) -> None:
         data = MizanData(
@@ -51,6 +50,7 @@ class FoundationTests(unittest.TestCase):
             sites=[],
         )
         outcome = evaluate_criterion(data, "P1", data.eligibility_criteria[0])
+        assert outcome is not None
         self.assertEqual(outcome.result, CriterionResult.NOT_MET)
 
     def test_missing_data_needs_screening(self) -> None:
@@ -67,6 +67,7 @@ class FoundationTests(unittest.TestCase):
             sites=[],
         )
         match = match_patient_trial(data, "P1", "T1")
+        assert match is not None
         self.assertEqual(match.tier, MatchTier.NEEDS_SCREENING)
 
 

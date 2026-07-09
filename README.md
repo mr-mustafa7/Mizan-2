@@ -22,8 +22,8 @@ Five layers, aligned with published clinical trial matching research but kept si
 |-------|---------|----------------|
 | **1. Ingest** | Load patients, facts, criteria, trials, sites | Structured cohort model (WIDE / MatchMiner style) |
 | **2. Prefilter** | Recruiting trials with rules only | TrialMatchAI deterministic pre-filters (age, status) |
-| **3. Eligibility** | MET / NOT MET / UNKNOWN / NOT APPLICABLE per criterion | TrialMatchAI criterion labels; ICH GCP audit trail |
-| **4. Ranking** | Composite score `(S_inc + S_exc) / 2` + tier | TrialMatchAI Methods Eq. 1–2 |
+| **3. Eligibility** | `MET` / `NOT_MET` / `UNKNOWN` per criterion (`criterion_evaluation`) | Prometheux Vadalog; ICH GCP audit trail |
+| **4. Ranking** | Soft-rule % + location bonus → tier (`pair_assessment`) | Prometheux Vadalog tiers |
 | **5. Decision support** | At-risk trials, shortlists, coordinator dashboard | TrialMatchAI top-20 review window (WIDE study) |
 
 ### Research references
@@ -34,9 +34,9 @@ Five layers, aligned with published clinical trial matching research but kept si
 
 ## Data inputs
 
-Place five CSV files in `data/`:
+Place five CSV files in `data/` or Prometheux-style `disk/`:
 
-- `patients.csv` — patient_id, age, sex, city, country
+- `patients.csv` / `patient.csv` — patient_id, age, sex, city, country
 - `patient_facts.csv` — diagnosis, biomarkers, labs, ECOG, prior treatments
 - `eligibility_criteria.csv` — inclusion/exclusion rules per trial
 - `trials.csv` — enrollment counts, status, phase
@@ -50,12 +50,15 @@ mizan/
   stages.py         # Five pipeline stages
   scoring.py        # Composite inclusion/exclusion score
   loader.py         # CSV ingest
-  evaluator.py      # Criterion rules engine
-  matcher.py        # Tiers + audit types
+  evaluator.py      # criterion_evaluation (Prometheux Vadalog)
+  matcher.py        # pair_assessment tiers + audit trail
+  quality.py        # patient_data_quality gate
   dashboards.py     # Coordinator views
   pipeline.py       # Orchestrator
 demo.py             # Demo runner
 data/               # Sample cohort
+disk/               # Prometheux-named CSV inputs
+prometheux/         # Authoritative mizan.vada Vadalog spec
 output/             # Generated artifacts
 ```
 

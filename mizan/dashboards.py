@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from mizan.loader import MizanData, PatientFact
+from mizan.loader import MizanData
 from mizan.matcher import MatchTier, PatientTrialMatch
 
 
@@ -35,13 +35,11 @@ class TrialSummary:
 class CoordinatorDashboardRow:
     trial_id: str
     title: str
-    therapeutic_area: str
     phase: str
     sponsor: str
     enrollment_count: int
     target_enrollment: int
     shortfall: int
-    fill_pct: float
     eligible_count: int
     needs_screening_count: int
     review_count: int
@@ -51,6 +49,7 @@ class CoordinatorDashboardRow:
 class DiagnosisSummaryRow:
     diagnosis: str
     eligible_patient_count: int
+    needs_screening_patient_count: int
 
 
 def at_risk_trials(data: MizanData) -> list[AtRiskTrial]:
@@ -121,7 +120,7 @@ def trial_summaries(matches: list[PatientTrialMatch]) -> list[TrialSummary]:
 def coordinator_dashboard(
     data: MizanData, matches: list[PatientTrialMatch]
 ) -> list[CoordinatorDashboardRow]:
-    """At-risk trials joined with eligible / needs-screening / review patient counts."""
+    """At-risk trials with eligible / needs-screening / review patient counts."""
     summaries = {s.trial_id: s for s in trial_summaries(matches)}
     rows: list[CoordinatorDashboardRow] = []
     for at_risk in at_risk_trials(data):
@@ -133,13 +132,11 @@ def coordinator_dashboard(
             CoordinatorDashboardRow(
                 trial_id=at_risk.trial_id,
                 title=at_risk.title,
-                therapeutic_area=at_risk.therapeutic_area,
                 phase=at_risk.phase,
                 sponsor=at_risk.sponsor,
                 enrollment_count=at_risk.enrollment_count,
                 target_enrollment=at_risk.target_enrollment,
                 shortfall=at_risk.shortfall,
-                fill_pct=at_risk.fill_pct,
                 eligible_count=summary.eligible_count,
                 needs_screening_count=summary.needs_screening_count,
                 review_count=summary.review_count,
@@ -156,18 +153,30 @@ def _patient_diagnosis(data: MizanData, patient_id: str) -> str | None:
 
 
 def diagnosis_summary(data: MizanData, matches: list[PatientTrialMatch]) -> list[DiagnosisSummaryRow]:
-    """Count distinct ELIGIBLE patients per diagnosis."""
-    eligible_patients = {m.patient_id for m in matches if m.tier == MatchTier.ELIGIBLE}
-    counts: dict[str, set[str]] = {}
-    for patient_id in eligible_patients:
+    """Distinct ELIGIBLE and NEEDS_SCREENING patients grouped by diagnosis."""
+    eligible = {m.patient_id for m in matches if m.tier == MatchTier.ELIGIBLE}
+    screening = {m.patient_id for m in matches if m.tier == MatchTier.NEEDS_SCREENING}
+    all_patients = eligible | screening
+
+    elig_by_diag: dict[str, set[str]] = {}
+    screen_by_diag: dict[str, set[str]] = {}
+    for patient_id in all_patients:
         diagnosis = _patient_diagnosis(data, patient_id)
         if not diagnosis:
             continue
-        counts.setdefault(diagnosis, set()).add(patient_id)
+        if patient_id in eligible:
+            elig_by_diag.setdefault(diagnosis, set()).add(patient_id)
+        if patient_id in screening:
+            screen_by_diag.setdefault(diagnosis, set()).add(patient_id)
 
+    diagnoses = set(elig_by_diag) | set(screen_by_diag)
     rows = [
-        DiagnosisSummaryRow(diagnosis=diag, eligible_patient_count=len(pids))
-        for diag, pids in counts.items()
+        DiagnosisSummaryRow(
+            diagnosis=diag,
+            eligible_patient_count=len(elig_by_diag.get(diag, set())),
+            needs_screening_patient_count=len(screen_by_diag.get(diag, set())),
+        )
+        for diag in diagnoses
     ]
-    rows.sort(key=lambda r: (-r.eligible_patient_count, r.diagnosis))
+    rows.sort(key=lambda r: (-r.eligible_patient_count, -r.needs_screening_patient_count, r.diagnosis))
     return rows

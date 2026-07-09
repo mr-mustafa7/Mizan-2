@@ -82,6 +82,7 @@ class EligibilityCriterion:
     value: str
     hard_gate: bool
     criterion_text: str
+    source_text: str = ""
     sequence_num: str = ""
 
 
@@ -211,6 +212,9 @@ def load_mizan_data(data_dir: str | Path) -> MizanData:
                 hard_gate=_parse_bool(hard_raw if hard_raw else "true"),
                 criterion_text=_first(
                     row, "criterion_text", "rule_text", "description", "original_rule"
+                ),
+                source_text=_first(
+                    row, "source_text", "criterion_text", "rule_text", "description", "original_rule"
                 ),
                 sequence_num=_first(row, "sequence_num", "criterion_number", "order"),
             )

@@ -42,8 +42,8 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
     trial_ids, prefilter = stage_prefilter(data)
     audit, eligibility = stage_eligibility(data, trial_ids)
     matches, ranking = stage_ranking(data, trial_ids, audit)
-    shortlists = patient_shortlists(matches, audit, data)
-    decision, decision_stage = stage_decision_support(data, matches, shortlists)
+    shortlists = patient_shortlists(matches)
+    decision, decision_stage = stage_decision_support(data, matches, audit, shortlists)
 
     audit_rows = [asdict(r) for r in audit]
     match_rows = [asdict(m) for m in matches]
@@ -51,8 +51,11 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
         row["tier"] = row["tier"].value if hasattr(row["tier"], "value") else row["tier"]
 
     counts = {
+        "patient_data_quality": _write_csv(out / "patient_data_quality.csv", decision["patient_data_quality"]),
         "audit_trail": _write_csv(out / "audit_trail.csv", audit_rows),
+        "pair_assessment": _write_csv(out / "pair_assessment.csv", match_rows),
         "patient_trial_matches": _write_csv(out / "patient_trial_matches.csv", match_rows),
+        "rejection_reason": _write_csv(out / "rejection_reason.csv", decision["rejection_reason"]),
         "patient_shortlists": _write_csv(out / "patient_shortlists.csv", decision["patient_shortlists"]),
         "at_risk_trials": _write_csv(out / "at_risk_trials.csv", decision["at_risk_trials"]),
         "coordinator_dashboard": _write_csv(out / "coordinator_dashboard.csv", decision["coordinator_dashboard"]),
@@ -62,7 +65,7 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
 
     stages = [ingest, prefilter, eligibility, ranking, decision_stage]
     report = {
-        "architecture": "mizan_foundation_v1",
+        "architecture": "mizan_prometheux_vadalog",
         "layers": [
             {
                 "id": s.layer.value,
@@ -89,7 +92,7 @@ def _demo_summary(report: dict, decision: dict) -> dict:
     at_risk = decision["at_risk_trials"]
     top_shortfall = at_risk[0] if at_risk else None
     return {
-        "headline": "Mizan coordinator decision-support demo",
+        "headline": "Mizan coordinator decision-support demo (Prometheux Vadalog)",
         "patients": report["inputs"]["row_counts"]["patients"],
         "recruiting_trials_evaluated": len(report["prefiltered_trials"]),
         "at_risk_trials": len(at_risk),
@@ -101,21 +104,23 @@ def _demo_summary(report: dict, decision: dict) -> dict:
 
 
 def _logic_checks(data, trial_ids, audit_rows, match_rows) -> dict[str, Any]:
-    issues: list[str] = []
-    criteria_by_trial = {}
-    for c in data.eligibility_criteria:
-        criteria_by_trial.setdefault(c.trial_id, 0)
-        criteria_by_trial[c.trial_id] += 1
+    from mizan.evaluator import is_supported_criterion
 
-    expected_audit = sum(
-        len(data.patients) * criteria_by_trial.get(tid, 0) for tid in trial_ids
-    )
+    issues: list[str] = []
+    supported_per_trial: dict[str, int] = {}
+    for c in data.eligibility_criteria:
+        if c.trial_id in trial_ids and is_supported_criterion(c):
+            supported_per_trial[c.trial_id] = supported_per_trial.get(c.trial_id, 0) + 1
+
+    expected_audit = sum(len(data.patients) * supported_per_trial.get(tid, 0) for tid in trial_ids)
     if len(audit_rows) != expected_audit:
         issues.append(f"Audit rows {len(audit_rows)} != expected {expected_audit}")
 
-    expected_matches = len(data.patients) * len(trial_ids)
-    if len(match_rows) != expected_matches:
-        issues.append(f"Match rows {len(match_rows)} != expected {expected_matches}")
+    expected_matches = len(match_rows)
+    pairs_with_rules = sum(1 for tid in trial_ids if supported_per_trial.get(tid, 0) > 0)
+    expected_pairs = len(data.patients) * pairs_with_rules
+    if expected_matches != expected_pairs:
+        issues.append(f"Match rows {expected_matches} != expected {expected_pairs}")
 
     audit_by_pair: dict[tuple[str, str], list[dict]] = {}
     for row in audit_rows:

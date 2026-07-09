@@ -1,12 +1,12 @@
-"""Patient-trial matching, scoring, classification, and audit trail."""
+"""Patient-trial pair assessment (Prometheux pair_assessment concept)."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 from enum import Enum
 
-from mizan.evaluator import CriterionResult, EvaluationOutcome, evaluate_criterion
-from mizan.loader import EligibilityCriterion, MizanData, Patient, Trial
+from mizan.evaluator import CriterionResult, EvaluationOutcome, build_criterion_evaluation, evaluate_criterion
+from mizan.loader import EligibilityCriterion, MizanData, Patient
 
 
 class MatchTier(str, Enum):
@@ -16,22 +16,37 @@ class MatchTier(str, Enum):
     NOT_ELIGIBLE = "NOT_ELIGIBLE"
 
 
-CITY_BONUS = 25.0
-COUNTRY_BONUS = 15.0
+CITY_BONUS = 25
+COUNTRY_BONUS = 15
+
+
+@dataclass(frozen=True)
+class CriterionEvaluationRow:
+    criterion_id: str
+    patient_id: str
+    trial_id: str
+    field_checked: str
+    comparator: str
+    polarity: str
+    hard_gate: bool
+    result: str
+    reason: str
+    source_text: str
 
 
 @dataclass(frozen=True)
 class AuditRecord:
     patient_id: str
+    age: int
+    sex: str
+    city: str
     trial_id: str
     criterion_id: str
     field_checked: str
-    rule_type: str
     hard_gate: bool
     result: str
     reason: str
-    patient_info: str
-    criterion_text: str
+    rule_text: str
 
 
 @dataclass(frozen=True)
@@ -43,18 +58,24 @@ class PatientTrialMatch:
     score: float
     soft_rules_met: int
     soft_rules_total: int
-    soft_rules_unknown: int
     location_bonus: float
-    hard_failures: int
-    hard_unknowns: int
-    soft_failures: int
+
+
+@dataclass(frozen=True)
+class RejectionReason:
+    patient_id: str
+    trial_id: str
+    criterion_id: str
+    field_checked: str
+    hard_gate: bool
+    reason: str
 
 
 def _criteria_for_trial(data: MizanData, trial_id: str) -> list[EligibilityCriterion]:
     return [c for c in data.eligibility_criteria if c.trial_id == trial_id]
 
 
-def _trial_lookup(data: MizanData, trial_id: str) -> Trial | None:
+def _trial_lookup(data: MizanData, trial_id: str):
     for trial in data.trials:
         if trial.trial_id == trial_id:
             return trial
@@ -68,166 +89,179 @@ def _patient_lookup(data: MizanData, patient_id: str) -> Patient | None:
     return None
 
 
-def _location_bonus(data: MizanData, patient: Patient, trial_id: str) -> float:
-    trial_sites = [s for s in data.sites if s.trial_id == trial_id]
-    if not trial_sites:
-        return 0.0
-
-    patient_city = patient.city.strip().lower()
-    patient_country = patient.country.strip().lower()
-
-    for site in trial_sites:
-        if site.city.strip().lower() == patient_city and patient_city:
-            return CITY_BONUS
-    for site in trial_sites:
-        if site.country.strip().lower() == patient_country and patient_country:
-            return COUNTRY_BONUS
-    return 0.0
+def _city_match(data: MizanData, patient: Patient, trial_id: str) -> bool:
+    for site in data.sites:
+        if site.trial_id == trial_id and site.city.strip().lower() == patient.city.strip().lower():
+            if patient.city.strip():
+                return True
+    return False
 
 
-def _classify_tier(
-    hard_failures: int,
-    hard_unknowns: int,
-    soft_failures: int,
-    soft_unknowns: int,
-    soft_total: int,
-    soft_met: int,
-    score: float,
-) -> MatchTier:
-    if hard_failures > 0:
-        return MatchTier.NOT_ELIGIBLE
+def _country_match(data: MizanData, patient: Patient, trial_id: str) -> bool:
+    if _city_match(data, patient, trial_id):
+        return False
+    for site in data.sites:
+        if site.trial_id == trial_id and site.country.strip().lower() == patient.country.strip().lower():
+            if patient.country.strip():
+                return True
+    return False
 
-    if hard_unknowns > 0 or soft_unknowns > 0:
-        return MatchTier.NEEDS_SCREENING
 
-    if soft_failures > 0:
-        return MatchTier.REVIEW
+def _location_bonus(data: MizanData, patient: Patient, trial_id: str) -> int:
+    if _city_match(data, patient, trial_id):
+        return CITY_BONUS
+    if _country_match(data, patient, trial_id):
+        return COUNTRY_BONUS
+    return 0
 
+
+def _soft_pct(soft_met: int, soft_total: int) -> int:
     if soft_total == 0:
+        return 100
+    return (100 * soft_met) // soft_total
+
+
+def _classify_pair(
+    hard_fail: bool,
+    hard_unknown: bool,
+    soft_met: int,
+    soft_total: int,
+) -> MatchTier:
+    if hard_fail:
+        return MatchTier.NOT_ELIGIBLE
+    if hard_unknown:
+        return MatchTier.NEEDS_SCREENING
+    if 2 * soft_met >= soft_total:
         return MatchTier.ELIGIBLE
-
-    # Strong fit: all soft rules met (or only N/A) and high composite score.
-    if soft_met == soft_total and score >= 70:
-        return MatchTier.ELIGIBLE
-
-    if score >= 50:
-        return MatchTier.REVIEW
-
     return MatchTier.REVIEW
 
 
-def build_audit_trail(data: MizanData) -> list[AuditRecord]:
-    """One row per patient x trial x criterion."""
+def _pair_outcomes(
+    data: MizanData, patient_id: str, trial_id: str
+) -> list[tuple[EligibilityCriterion, EvaluationOutcome]]:
+    outcomes: list[tuple[EligibilityCriterion, EvaluationOutcome]] = []
+    for criterion in _criteria_for_trial(data, trial_id):
+        outcome = evaluate_criterion(data, patient_id, criterion)
+        if outcome is not None:
+            outcomes.append((criterion, outcome))
+    return outcomes
+
+
+def build_criterion_evaluation_rows(
+    data: MizanData, trial_ids: list[str] | None = None
+) -> list[CriterionEvaluationRow]:
+    rows: list[CriterionEvaluationRow] = []
+    for criterion, patient_id, outcome in build_criterion_evaluation(data, trial_ids):
+        rows.append(
+            CriterionEvaluationRow(
+                criterion_id=criterion.criterion_id,
+                patient_id=patient_id,
+                trial_id=criterion.trial_id,
+                field_checked=criterion.field_checked,
+                comparator=criterion.operator,
+                polarity=criterion.rule_type,
+                hard_gate=criterion.hard_gate,
+                result=outcome.result.value,
+                reason=outcome.reason,
+                source_text=outcome.source_text,
+            )
+        )
+    return rows
+
+
+def build_audit_trail(data: MizanData, trial_ids: list[str] | None = None) -> list[AuditRecord]:
+    """GCP audit trail derived from criterion_evaluation."""
     records: list[AuditRecord] = []
-    for patient in data.patients:
-        for trial in data.trials:
-            for criterion in _criteria_for_trial(data, trial.trial_id):
-                outcome = evaluate_criterion(data, patient.patient_id, criterion)
-                records.append(
-                    AuditRecord(
-                        patient_id=patient.patient_id,
-                        trial_id=trial.trial_id,
-                        criterion_id=criterion.criterion_id,
-                        field_checked=criterion.field_checked,
-                        rule_type=criterion.rule_type,
-                        hard_gate=criterion.hard_gate,
-                        result=outcome.result.value,
-                        reason=outcome.reason,
-                        patient_info=outcome.patient_info,
-                        criterion_text=criterion.criterion_text or (
-                            f"{criterion.rule_type} {criterion.field_checked} "
-                            f"{criterion.operator} {criterion.value}"
-                        ),
-                    )
-                )
+    for row in build_criterion_evaluation_rows(data, trial_ids):
+        patient = _patient_lookup(data, row.patient_id)
+        if patient is None:
+            continue
+        records.append(
+            AuditRecord(
+                patient_id=row.patient_id,
+                age=patient.age,
+                sex=patient.sex,
+                city=patient.city,
+                trial_id=row.trial_id,
+                criterion_id=row.criterion_id,
+                field_checked=row.field_checked,
+                hard_gate=row.hard_gate,
+                result=row.result,
+                reason=row.reason,
+                rule_text=row.source_text,
+            )
+        )
     return records
 
 
-def _score_soft_rules(outcomes: list[tuple[EligibilityCriterion, EvaluationOutcome]]) -> tuple[float, int, int, int, int]:
-    soft = [(c, o) for c, o in outcomes if not c.hard_gate and o.result != CriterionResult.NOT_APPLICABLE]
-    if not soft:
-        return 100.0, 0, 0, 0, 0
-
-    total = len(soft)
-    met = sum(1 for _, o in soft if o.result == CriterionResult.MET)
-    unknown = sum(1 for _, o in soft if o.result == CriterionResult.UNKNOWN)
-    failed = sum(1 for _, o in soft if o.result == CriterionResult.NOT_MET)
-    ratio = met / total
-    return ratio * 100.0, met, total, unknown, failed
-
-
-def match_patient_trial(
-    data: MizanData, patient_id: str, trial_id: str, audit_index: dict[tuple[str, str, str], AuditRecord] | None = None
-) -> PatientTrialMatch:
-    """Score and classify a single patient-trial pair using the same logic as the audit trail."""
+def match_patient_trial(data: MizanData, patient_id: str, trial_id: str) -> PatientTrialMatch | None:
+    """Score and classify one patient-trial pair (pair_assessment)."""
     trial = _trial_lookup(data, trial_id)
     patient = _patient_lookup(data, patient_id)
     if trial is None or patient is None:
-        raise ValueError(f"Unknown patient {patient_id} or trial {trial_id}")
+        return None
 
-    criteria = _criteria_for_trial(data, trial_id)
-    outcomes: list[tuple[EligibilityCriterion, EvaluationOutcome]] = []
-    for criterion in criteria:
-        if audit_index and (patient_id, trial_id, criterion.criterion_id) in audit_index:
-            record = audit_index[(patient_id, trial_id, criterion.criterion_id)]
-            outcome = EvaluationOutcome(
-                CriterionResult(record.result),
-                record.reason,
-                record.patient_info,
-            )
-        else:
-            outcome = evaluate_criterion(data, patient_id, criterion)
-        outcomes.append((criterion, outcome))
+    outcomes = _pair_outcomes(data, patient_id, trial_id)
+    if not outcomes:
+        return None
 
-    hard = [
-        (c, o)
-        for c, o in outcomes
-        if c.hard_gate and o.result != CriterionResult.NOT_APPLICABLE
-    ]
-    hard_failures = sum(1 for _, o in hard if o.result == CriterionResult.NOT_MET)
-    hard_unknowns = sum(1 for _, o in hard if o.result == CriterionResult.UNKNOWN)
+    hard = [(c, o) for c, o in outcomes if c.hard_gate]
+    hard_fail = any(o.result == CriterionResult.NOT_MET for _, o in hard)
+    hard_unknown = any(o.result == CriterionResult.UNKNOWN for _, o in hard)
 
-    soft_score, soft_met, soft_total, soft_unknown, soft_failed = _score_soft_rules(outcomes)
-    location_bonus = 0.0 if hard_failures > 0 else _location_bonus(data, patient, trial_id)
-    final_score = soft_score + location_bonus if hard_failures == 0 else 0.0
+    soft = [(c, o) for c, o in outcomes if not c.hard_gate]
+    soft_met = sum(1 for _, o in soft if o.result == CriterionResult.MET)
+    soft_total = len(soft)
 
-    tier = _classify_tier(
-        hard_failures=hard_failures,
-        hard_unknowns=hard_unknowns,
-        soft_failures=soft_failed,
-        soft_unknowns=soft_unknown,
-        soft_total=soft_total,
-        soft_met=soft_met,
-        score=final_score,
-    )
+    tier = _classify_pair(hard_fail, hard_unknown, soft_met, soft_total)
+    loc_bonus = 0 if hard_fail else _location_bonus(data, patient, trial_id)
+    pct = _soft_pct(soft_met, soft_total)
+    score = 0.0 if hard_fail else float(pct + loc_bonus)
 
     return PatientTrialMatch(
         patient_id=patient_id,
         trial_id=trial_id,
         trial_title=trial.title,
         tier=tier,
-        score=round(final_score, 2),
+        score=score,
         soft_rules_met=soft_met,
         soft_rules_total=soft_total,
-        soft_rules_unknown=soft_unknown,
-        location_bonus=location_bonus,
-        hard_failures=hard_failures,
-        hard_unknowns=hard_unknowns,
-        soft_failures=soft_failed,
+        location_bonus=float(loc_bonus),
     )
 
 
-def match_all(data: MizanData) -> tuple[list[AuditRecord], list[PatientTrialMatch]]:
-    """Run full patient x trial matching. Audit trail and scores share one evaluation pass."""
-    audit = build_audit_trail(data)
-    audit_index = {
-        (r.patient_id, r.trial_id, r.criterion_id): r for r in audit
-    }
+def match_all(
+    data: MizanData, trial_ids: list[str] | None = None
+) -> tuple[list[AuditRecord], list[PatientTrialMatch]]:
+    """Full patient × trial matching for active trials."""
+    active = trial_ids or [t.trial_id for t in data.trials if t.status == "recruiting"]
+    audit = build_audit_trail(data, active)
     matches: list[PatientTrialMatch] = []
     for patient in data.patients:
-        for trial in data.trials:
-            matches.append(match_patient_trial(data, patient.patient_id, trial.trial_id, audit_index))
-
-    # Rank patients by score within each trial (descending).
+        for trial_id in active:
+            match = match_patient_trial(data, patient.patient_id, trial_id)
+            if match is not None:
+                matches.append(match)
     matches.sort(key=lambda m: (m.trial_id, -m.score, m.patient_id))
     return audit, matches
+
+
+def build_rejection_reasons(matches: list[PatientTrialMatch], audit: list[AuditRecord]) -> list[RejectionReason]:
+    """Hard-gate failures for NOT_ELIGIBLE pairs."""
+    ineligible = {(m.patient_id, m.trial_id) for m in matches if m.tier == MatchTier.NOT_ELIGIBLE}
+    reasons: list[RejectionReason] = []
+    for record in audit:
+        if (record.patient_id, record.trial_id) not in ineligible:
+            continue
+        if record.hard_gate and record.result == "NOT_MET":
+            reasons.append(
+                RejectionReason(
+                    patient_id=record.patient_id,
+                    trial_id=record.trial_id,
+                    criterion_id=record.criterion_id,
+                    field_checked=record.field_checked,
+                    hard_gate=record.hard_gate,
+                    reason=record.reason,
+                )
+            )
+    return reasons
