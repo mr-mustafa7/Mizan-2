@@ -1,0 +1,55 @@
+{
+  "patient": {
+    "patient_id": "P008",
+    "age": 76,
+    "sex": "F",
+    "city": "Singapore",
+    "country": "Singapore"
+  },
+  "facts": [
+    {
+      "patient_id": "P008",
+      "fact_id": "F801",
+      "field_name": "diagnosis",
+      "num_value": "",
+      "str_value": "colorectal cancer",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "pathology"
+    },
+    {
+      "patient_id": "P008",
+      "fact_id": "F802",
+      "field_name": "ecog",
+      "num_value": 2,
+      "str_value": "",
+      "unit": "",
+      "negated": false,
+      "confidence": "medium",
+      "source": "clinic_note"
+    },
+    {
+      "patient_id": "P008",
+      "fact_id": "F803",
+      "field_name": "cancer_stage",
+      "num_value": "",
+      "str_value": "Stage IV",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "imaging"
+    },
+    {
+      "patient_id": "P008",
+      "fact_id": "F804",
+      "field_name": "lab_hemoglobin",
+      "num_value": 9.4,
+      "str_value": "g/dL",
+      "unit": "g/dL",
+      "negated": false,
+      "confidence": "high",
+      "source": "lab"
+    }
+  ]
+}

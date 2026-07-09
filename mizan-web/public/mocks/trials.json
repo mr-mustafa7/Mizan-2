@@ -1,0 +1,62 @@
+[
+  {
+    "trial_id": "NCT001",
+    "title": "EGFR Inhibitor Study NSCLC",
+    "phase": "Phase II",
+    "sponsor": "OncoPharma",
+    "therapeutic_area": "lung cancer",
+    "status": "recruiting",
+    "enrollment_count": 12,
+    "target_enrollment": 60
+  },
+  {
+    "trial_id": "NCT002",
+    "title": "First-Line Immunotherapy NSCLC",
+    "phase": "Phase III",
+    "sponsor": "GlobalBio",
+    "therapeutic_area": "lung cancer",
+    "status": "recruiting",
+    "enrollment_count": 45,
+    "target_enrollment": 120
+  },
+  {
+    "trial_id": "NCT003",
+    "title": "HER2 Targeted Breast Trial",
+    "phase": "Phase II",
+    "sponsor": "BreastCure",
+    "therapeutic_area": "breast cancer",
+    "status": "recruiting",
+    "enrollment_count": 8,
+    "target_enrollment": 40
+  },
+  {
+    "trial_id": "NCT004",
+    "title": "Chemo-Naive EGFR Trial",
+    "phase": "Phase II",
+    "sponsor": "OncoPharma",
+    "therapeutic_area": "lung cancer",
+    "status": "recruiting",
+    "enrollment_count": 30,
+    "target_enrollment": 50
+  },
+  {
+    "trial_id": "NCT005",
+    "title": "Advanced NSCLC Palliative",
+    "phase": "Phase II",
+    "sponsor": "CareOnc",
+    "therapeutic_area": "lung cancer",
+    "status": "recruiting",
+    "enrollment_count": 5,
+    "target_enrollment": 80
+  },
+  {
+    "trial_id": "NCT006",
+    "title": "Completed Enrollment Trial",
+    "phase": "Phase III",
+    "sponsor": "DonePharma",
+    "therapeutic_area": "lung cancer",
+    "status": "completed",
+    "enrollment_count": 100,
+    "target_enrollment": 100
+  }
+]

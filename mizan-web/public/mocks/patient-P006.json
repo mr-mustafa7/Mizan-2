@@ -1,0 +1,44 @@
+{
+  "patient": {
+    "patient_id": "P006",
+    "age": 58,
+    "sex": "F",
+    "city": "Paris",
+    "country": "France"
+  },
+  "facts": [
+    {
+      "patient_id": "P006",
+      "fact_id": "F601",
+      "field_name": "diagnosis",
+      "num_value": "",
+      "str_value": "rheumatoid arthritis",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "rheumatology_clinic"
+    },
+    {
+      "patient_id": "P006",
+      "fact_id": "F602",
+      "field_name": "ecog",
+      "num_value": 2,
+      "str_value": "",
+      "unit": "",
+      "negated": false,
+      "confidence": "high",
+      "source": "clinic_note"
+    },
+    {
+      "patient_id": "P006",
+      "fact_id": "F603",
+      "field_name": "biomarker_egfr",
+      "num_value": "",
+      "str_value": "not detected",
+      "unit": "",
+      "negated": true,
+      "confidence": "high",
+      "source": "molecular"
+    }
+  ]
+}

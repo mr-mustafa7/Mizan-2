@@ -1,0 +1,19 @@
+{
+  "status": "ok",
+  "message": "Data imported and matching completed",
+  "inputs": {
+    "patients": 8,
+    "patient_facts": 45,
+    "eligibility_criteria": 28,
+    "trials": 6,
+    "sites": 10
+  },
+  "output_row_counts": {
+    "audit_trail": 224,
+    "patient_trial_matches": 48,
+    "at_risk_trials": 4,
+    "trial_summary": 6,
+    "coordinator_dashboard": 4,
+    "diagnosis_summary": 4
+  }
+}

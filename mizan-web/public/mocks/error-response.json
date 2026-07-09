@@ -1,0 +1,9 @@
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Missing required file: patients.csv",
+    "details": [
+      "Expected one of: patients.csv, patient.csv"
+    ]
+  }
+}
