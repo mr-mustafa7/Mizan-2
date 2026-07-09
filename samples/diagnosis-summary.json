@@ -1,0 +1,18 @@
+[
+  {
+    "diagnosis": "NSCLC adenocarcinoma",
+    "eligible_patient_count": 5
+  },
+  {
+    "diagnosis": "NSCLC squamous",
+    "eligible_patient_count": 1
+  },
+  {
+    "diagnosis": "breast cancer HER2+",
+    "eligible_patient_count": 1
+  },
+  {
+    "diagnosis": "colorectal cancer",
+    "eligible_patient_count": 1
+  }
+]
