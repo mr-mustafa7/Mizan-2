@@ -1,0 +1,126 @@
+{
+  "patient_id": "P009",
+  "trial_id": "NCT001",
+  "trial_title": "EGFR Inhibitor Study NSCLC",
+  "tier": "NEEDS_SCREENING",
+  "score": 125.0,
+  "soft_rules_met": 1,
+  "soft_rules_total": 1,
+  "location_bonus": 25.0,
+  "summary": "P009 NEEDS SCREENING for EGFR Inhibitor Study NSCLC: no mandatory criteria failed, but 1 could not be confirmed due to missing data (biomarker_egfr). Collect this data to finalize eligibility.",
+  "highlights": [
+    "5 of 6 hard gates passed",
+    "MISSING data (hard gate) \u2014 biomarker_egfr: No result on record for this marker",
+    "1/1 preference criteria met",
+    "+25 location bonus (same city as a trial site: Boston)"
+  ],
+  "decisive_factors": [
+    "biomarker_egfr: No result on record for this marker"
+  ],
+  "facts": [
+    {
+      "field_checked": "diagnosis",
+      "patient_value": "NSCLC adenocarcinoma",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C001",
+      "criterion_text": "Histologically confirmed NSCLC",
+      "reason": "Diagnosis matches"
+    },
+    {
+      "field_checked": "age",
+      "patient_value": "63",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C002",
+      "criterion_text": "Age 18 or older",
+      "reason": "Age meets minimum"
+    },
+    {
+      "field_checked": "age",
+      "patient_value": "63",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C003",
+      "criterion_text": "Age 75 or younger",
+      "reason": "Age within maximum"
+    },
+    {
+      "field_checked": "ecog",
+      "patient_value": "1",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C004",
+      "criterion_text": "ECOG performance status 0-2",
+      "reason": "ECOG within limit"
+    },
+    {
+      "field_checked": "biomarker_egfr",
+      "patient_value": "not on record",
+      "result": "UNKNOWN",
+      "bar": "amber",
+      "hard_gate": true,
+      "polarity": "inclusion",
+      "criterion_id": "C005",
+      "criterion_text": "Documented EGFR activating mutation required",
+      "reason": "No result on record for this marker"
+    },
+    {
+      "field_checked": "prior_treatments",
+      "patient_value": "none",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": true,
+      "polarity": "exclusion",
+      "criterion_id": "C006",
+      "criterion_text": "Prior osimertinib therapy excluded",
+      "reason": "Treatment-naive - passes exclusion"
+    },
+    {
+      "field_checked": "cancer_stage",
+      "patient_value": "Stage IIIA",
+      "result": "MET",
+      "bar": "green",
+      "hard_gate": false,
+      "polarity": "inclusion",
+      "criterion_id": "C007",
+      "criterion_text": "Cancer stage documented",
+      "reason": "Cancer stage matches"
+    }
+  ],
+  "steps": [
+    {
+      "step": 1,
+      "title": "Data quality gate",
+      "detail": "Patient P009 is scoreable (diagnosis and ECOG on record)."
+    },
+    {
+      "step": 2,
+      "title": "Mandatory (hard) gates",
+      "detail": "5 passed, 0 failed, 1 unknown out of 6 mandatory criteria."
+    },
+    {
+      "step": 3,
+      "title": "Decisive factor",
+      "detail": "Needs screening because: biomarker_egfr \u2014 No result on record for this marker."
+    },
+    {
+      "step": 4,
+      "title": "Preference scoring",
+      "detail": "1/1 soft criteria met = 100% + 25 location bonus \u2192 match score 125."
+    },
+    {
+      "step": 5,
+      "title": "Tier assigned",
+      "detail": "NEEDS_SCREENING (no hard fail, but a hard gate is UNKNOWN \u2192 NEEDS_SCREENING)."
+    }
+  ]
+}

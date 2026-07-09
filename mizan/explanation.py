@@ -18,14 +18,13 @@ from mizan.evaluator import CriterionResult, evaluate_criterion
 from mizan.loader import EligibilityCriterion, MizanData, Patient
 from mizan.matcher import (
     MatchTier,
-    _classify_pair,
     _city_match,
     _country_match,
     _criteria_for_trial,
-    _location_bonus,
     _patient_lookup,
     _soft_pct,
     _trial_lookup,
+    match_patient_trial,
 )
 
 # Match-bar colour per criterion result (frontend FactMatchBar).
@@ -120,6 +119,11 @@ def build_match_explanation(
     if trial is None or patient is None:
         return None
 
+    # Single source of truth for tier / score / counts (identical to pair_assessment).
+    match = match_patient_trial(data, patient_id, trial_id)
+    if match is None:
+        return None
+
     outcomes: list[tuple[EligibilityCriterion, "object"]] = []
     for criterion in _criteria_for_trial(data, trial_id):
         outcome = evaluate_criterion(data, patient_id, criterion)
@@ -133,13 +137,13 @@ def build_match_explanation(
     hard_fail = [(c, o) for c, o in hard if o.result == CriterionResult.NOT_MET]
     hard_unknown = [(c, o) for c, o in hard if o.result == CriterionResult.UNKNOWN]
     hard_passed = [(c, o) for c, o in hard if o.result == CriterionResult.MET]
-    soft_met = sum(1 for _, o in soft if o.result == CriterionResult.MET)
-    soft_total = len(soft)
 
-    tier = _classify_pair(bool(hard_fail), bool(hard_unknown), soft_met, soft_total)
-    loc_bonus = 0 if hard_fail else _location_bonus(data, patient, trial_id)
+    tier = match.tier
+    soft_met = match.soft_rules_met
+    soft_total = match.soft_rules_total
+    loc_bonus = int(match.location_bonus)
+    score = match.score
     pct = _soft_pct(soft_met, soft_total)
-    score = 0.0 if hard_fail else float(pct + loc_bonus)
 
     facts = [
         FactExplanation(

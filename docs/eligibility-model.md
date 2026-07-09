@@ -236,7 +236,51 @@ and written to `output/match_explanations.json`. Committed contract samples:
 
 ---
 
-## 8. Worked examples
+## 8. Enumerations (every value the UI must handle)
+
+Hard-code against these — the backend will never emit a value outside them.
+
+**`tier`**: `ELIGIBLE` · `NEEDS_SCREENING` · `REVIEW` · `NOT_ELIGIBLE`
+
+**`result`**: `MET` · `NOT_MET` · `UNKNOWN`
+
+**`bar`** (derived from `result`): `green` (MET) · `amber` (UNKNOWN) · `red` (NOT_MET)
+
+**`polarity`**: `inclusion` · `exclusion`
+
+**`field_checked`**: `age` · `ecog` · `diagnosis` · `cancer_stage` · `prior_treatments` · `biomarker_*` (e.g. `biomarker_egfr`, `biomarker_her2`, `biomarker_kras`)
+
+**`comparator`**: `ge` · `le` · `contains` · `positive`
+
+**`reason`** (exhaustive set of strings, safe for i18n keys):
+
+| Field / case | reason |
+|---|---|
+| age ge | `Age meets minimum` / `Age below minimum` |
+| age le | `Age within maximum` / `Age exceeds maximum` |
+| ecog | `ECOG within limit` / `ECOG exceeds limit` / `No ECOG performance status on record` |
+| diagnosis | `Diagnosis matches` / `Diagnosis does not match` / `No diagnosis on record` |
+| cancer_stage | `Cancer stage matches` / `Cancer stage does not match` / `No cancer stage on record` |
+| biomarker inclusion | `Marker positive - meets inclusion` / `Marker wild type - fails inclusion` / `Marker negative - fails inclusion` / `Marker not detected - fails inclusion` / `Marker explicitly absent - fails inclusion` / `No result on record for this marker` |
+| biomarker exclusion | `Marker negative - passes exclusion` / `Marker absent - passes exclusion` / `Marker positive - fails exclusion` / `No result on record for this marker` |
+| prior_treatments exclusion | `Treatment-naive - passes exclusion` / `Excluded treatment not found - passes` / `Prior treatment found - excluded` / `No treatment history on record` |
+| prior_treatments inclusion | `Required prior treatment found` / `Required prior treatment not found` / `No treatment history on record` |
+
+**`patient_value`**: the raw recorded value (e.g. `"NSCLC adenocarcinoma"`, `"67"`, `"L858R mutation"`); `"not on record"` when the fact is missing (pairs with `result = UNKNOWN`).
+
+> Reason strings are intentionally short. For a full sentence, combine
+> `criterion_text` + `reason` (e.g. "Histologically confirmed NSCLC — Diagnosis matches").
+
+### Integration notes / gotchas
+
+- `match_explanations.json` contains **only recruiting trials** that have at least one *supported* criterion, and only pairs with ≥1 evaluated criterion. If the UI requests a pair that isn't present, treat it as "no automated assessment" rather than an error.
+- `score` ranges **0–125** (soft % 0–100 + location bonus 0/15/25). If you show it as a percentage bar, cap/normalize at your discretion — it is a ranking aid, not the tier.
+- Criteria the engine does **not** auto-evaluate (labs, age exclusions) are absent from `facts[]` and listed in `criterion_coverage.csv` (`evaluated = NO`). Surface these as "manual check", never as pass/fail.
+- `tier`/`score`/`soft_rules_met`/`soft_rules_total`/`location_bonus` in `match_explanations.json` are guaranteed identical to the same pair in `pair_assessment.csv` (same code path).
+
+---
+
+## 9. Worked examples
 
 Assume a trial with 4 hard inclusion criteria + 1 soft criterion, patient in the same city as a site.
 
