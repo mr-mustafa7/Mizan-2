@@ -2,7 +2,35 @@
 
 Clinical trial matching for cancer coordinators — foundation architecture for medtech demos.
 
-## Quick demo
+This repo is a monorepo:
+
+- **Backend** (repo root) — the Python matching engine + a FastAPI HTTP server that implements [`API.md`](API.md).
+- **Frontend** (`mizan-web/`) — the Next.js coordinator UI (added via its own PR).
+
+## Run the backend API
+
+```bash
+pip install -r requirements.txt
+python3 server.py                 # serves http://localhost:8000
+```
+
+Interactive docs at http://localhost:8000/docs. It loads `data/` on startup and
+implements every endpoint in [`API.md`](API.md) (health, patients, trials,
+matches, per-pair audit trail, dashboards, plus `POST /api/import` and
+`POST /api/match/run`).
+
+Point the frontend at it:
+
+```bash
+# mizan-web/.env.local
+NEXT_PUBLIC_USE_MOCK_API=false
+NEXT_PUBLIC_API_URL=http://localhost:8000
+```
+
+Environment knobs: `MIZAN_DATA_DIR` (default `data`), `MIZAN_PORT` (default `8000`),
+`MIZAN_CORS_ORIGINS` (comma-separated; default `*`).
+
+## Quick demo (batch pipeline, no server)
 
 ```bash
 python3 demo.py

@@ -42,20 +42,20 @@ Sample: [`samples/error-response.json`](samples/error-response.json)
 
 | Endpoint | Status | Sample response |
 |----------|--------|-----------------|
-| `POST /api/import` | 🔴 Not started | [`samples/import-response.json`](samples/import-response.json) |
-| `POST /api/match/run` | 🔴 Not started | [`samples/match-run-response.json`](samples/match-run-response.json) |
-| `GET /api/matches` | 🔴 Not started | [`samples/matches.json`](samples/matches.json) |
-| `GET /api/matches/{patient_id}/{trial_id}` | 🔴 Not started | (single `PatientTrialMatch` from matches list) |
-| `GET /api/matches/{patient_id}/{trial_id}/audit` | 🔴 Not started | [`samples/audit-trail-P001-NCT001.json`](samples/audit-trail-P001-NCT001.json) |
-| `GET /api/patients` | 🔴 Not started | [`samples/patients.json`](samples/patients.json) |
-| `GET /api/patients/{patient_id}` | 🔴 Not started | [`samples/patient-P001.json`](samples/patient-P001.json) |
-| `GET /api/trials` | 🔴 Not started | [`samples/trials.json`](samples/trials.json) |
-| `GET /api/trials/{trial_id}` | 🔴 Not started | [`samples/trial-NCT001.json`](samples/trial-NCT001.json) |
-| `GET /api/dashboard/coordinator` | 🔴 Not started | [`samples/coordinator-dashboard.json`](samples/coordinator-dashboard.json) |
-| `GET /api/dashboard/at-risk-trials` | 🔴 Not started | [`samples/at-risk-trials.json`](samples/at-risk-trials.json) |
-| `GET /api/dashboard/trial-summary` | 🔴 Not started | [`samples/trial-summary.json`](samples/trial-summary.json) |
-| `GET /api/dashboard/diagnosis-summary` | 🔴 Not started | [`samples/diagnosis-summary.json`](samples/diagnosis-summary.json) |
-| `GET /api/health` | 🔴 Not started | `{ "status": "ok" }` |
+| `POST /api/import` | 🟢 Ready | [`samples/import-response.json`](samples/import-response.json) |
+| `POST /api/match/run` | 🟢 Ready | [`samples/match-run-response.json`](samples/match-run-response.json) |
+| `GET /api/matches` | 🟢 Ready | [`samples/matches.json`](samples/matches.json) |
+| `GET /api/matches/{patient_id}/{trial_id}` | 🟢 Ready | (single `PatientTrialMatch` from matches list) |
+| `GET /api/matches/{patient_id}/{trial_id}/audit` | 🟢 Ready | [`samples/audit-trail-P001-NCT001.json`](samples/audit-trail-P001-NCT001.json) |
+| `GET /api/patients` | 🟢 Ready | [`samples/patients.json`](samples/patients.json) |
+| `GET /api/patients/{patient_id}` | 🟢 Ready | [`samples/patient-P001.json`](samples/patient-P001.json) |
+| `GET /api/trials` | 🟢 Ready | [`samples/trials.json`](samples/trials.json) |
+| `GET /api/trials/{trial_id}` | 🟢 Ready | [`samples/trial-NCT001.json`](samples/trial-NCT001.json) |
+| `GET /api/dashboard/coordinator` | 🟢 Ready | [`samples/coordinator-dashboard.json`](samples/coordinator-dashboard.json) |
+| `GET /api/dashboard/at-risk-trials` | 🟢 Ready | [`samples/at-risk-trials.json`](samples/at-risk-trials.json) |
+| `GET /api/dashboard/trial-summary` | 🟢 Ready | [`samples/trial-summary.json`](samples/trial-summary.json) |
+| `GET /api/dashboard/diagnosis-summary` | 🟢 Ready | [`samples/diagnosis-summary.json`](samples/diagnosis-summary.json) |
+| `GET /api/health` | 🟢 Ready | `{ "status": "ok" }` |
 
 Update the status column as endpoints are implemented: 🔴 not started → 🟡 stub → 🟢 ready.
 
@@ -66,6 +66,7 @@ Update the status column as endpoints are implemented: 🔴 not started → 🟡
 | Date | Change |
 |------|--------|
 | 2026-07-09 | Initial contract + sample JSON from matching pipeline |
+| 2026-07-09 | Backend implemented (FastAPI, `mizan/api.py`) — all 14 endpoints live. Run with `python3 server.py`. Note: the engine currently emits `CriterionResult` values `MET`/`NOT_MET`/`UNKNOWN` (a subset of the enum; `NOT_APPLICABLE` is reserved). |
 
 ---
 
