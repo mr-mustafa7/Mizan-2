@@ -1,0 +1,74 @@
+"""Tests for Mizan foundation architecture."""
+
+import unittest
+
+from mizan.architecture import Layer
+from mizan.evaluator import CriterionResult, evaluate_criterion
+from mizan.loader import EligibilityCriterion, MizanData, Patient, PatientFact, Trial
+from mizan.matcher import MatchTier, match_patient_trial
+from mizan.scoring import composite_score
+from mizan.stages import stage_ingest, stage_prefilter
+
+
+class FoundationTests(unittest.TestCase):
+    def test_five_layers_exist(self) -> None:
+        self.assertEqual(len(Layer), 5)
+
+    def test_ingest_and_prefilter(self) -> None:
+        data, _ = stage_ingest("data")
+        trial_ids, prefilter = stage_prefilter(data)
+        self.assertGreater(len(trial_ids), 0)
+        self.assertEqual(prefilter.layer, Layer.PREFILTER)
+
+    def test_composite_score_excludes_unknown(self) -> None:
+        criterion = EligibilityCriterion(
+            "C1", "T1", "inclusion", "age", "ge", "18", True, "Adult"
+        )
+        outcomes = [
+            (
+                criterion,
+                type("O", (), {"result": CriterionResult.MET, "reason": "", "patient_info": ""})(),
+            )
+        ]
+        score = composite_score(outcomes)
+        self.assertEqual(score.inclusion_score, 100.0)
+        self.assertEqual(score.composite_score, 100.0)
+
+    def test_wild_type_is_not_met_for_egfr_inclusion(self) -> None:
+        data = MizanData(
+            patients=[Patient("P1", 55, "F", "Boston", "USA")],
+            patient_facts=[
+                PatientFact("P1", "F1", "diagnosis", None, "NSCLC", "", False, "high", "path"),
+                PatientFact("P1", "F2", "ecog", 1, "", "", False, "high", "clinic"),
+                PatientFact("P1", "F3", "biomarker_egfr", None, "wild type", "", False, "high", "mol"),
+            ],
+            eligibility_criteria=[
+                EligibilityCriterion(
+                    "C1", "T1", "inclusion", "biomarker_egfr", "positive", "mutation", True, "EGFR+"
+                )
+            ],
+            trials=[Trial("T1", "Test", "II", "Sp", "lung", "recruiting", 1, 10)],
+            sites=[],
+        )
+        outcome = evaluate_criterion(data, "P1", data.eligibility_criteria[0])
+        self.assertEqual(outcome.result, CriterionResult.NOT_MET)
+
+    def test_missing_data_needs_screening(self) -> None:
+        data = MizanData(
+            patients=[Patient("P1", 55, "F", "Boston", "USA")],
+            patient_facts=[
+                PatientFact("P1", "F1", "diagnosis", None, "NSCLC", "", False, "high", "path"),
+                PatientFact("P1", "F2", "ecog", 1, "", "", False, "high", "clinic"),
+            ],
+            eligibility_criteria=[
+                EligibilityCriterion("C1", "T1", "inclusion", "biomarker_egfr", "positive", "mutation", True, "EGFR+"),
+            ],
+            trials=[Trial("T1", "Test", "II", "Sp", "lung", "recruiting", 1, 10)],
+            sites=[],
+        )
+        match = match_patient_trial(data, "P1", "T1")
+        self.assertEqual(match.tier, MatchTier.NEEDS_SCREENING)
+
+
+if __name__ == "__main__":
+    unittest.main()

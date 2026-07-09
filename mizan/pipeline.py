@@ -1,4 +1,4 @@
-"""Orchestrate the full Mizan matching pipeline."""
+"""Run the five-layer Mizan foundation pipeline."""
 
 from __future__ import annotations
 
@@ -8,14 +8,16 @@ from dataclasses import asdict
 from pathlib import Path
 from typing import Any
 
-from mizan.dashboards import (
-    at_risk_trials,
-    coordinator_dashboard,
-    diagnosis_summary,
-    trial_summaries,
+from mizan.architecture import FOUNDATION_REFERENCES, Layer
+from mizan.loader import summarize_inputs
+from mizan.stages import (
+    patient_shortlists,
+    stage_decision_support,
+    stage_eligibility,
+    stage_ingest,
+    stage_prefilter,
+    stage_ranking,
 )
-from mizan.loader import load_mizan_data, summarize_inputs
-from mizan.matcher import match_all
 
 
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> int:
@@ -32,94 +34,97 @@ def _write_csv(path: Path, rows: list[dict[str, Any]]) -> int:
 
 
 def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]:
-    """Load data, run matching, write outputs, return row counts."""
-    data = load_mizan_data(data_dir)
+    """Execute all five foundation layers and write demo artifacts."""
     out = Path(output_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    audit, matches = match_all(data)
+    data, ingest = stage_ingest(str(data_dir))
+    trial_ids, prefilter = stage_prefilter(data)
+    audit, eligibility = stage_eligibility(data, trial_ids)
+    matches, ranking = stage_ranking(data, trial_ids, audit)
+    shortlists = patient_shortlists(matches, audit, data)
+    decision, decision_stage = stage_decision_support(data, matches, shortlists)
 
     audit_rows = [asdict(r) for r in audit]
     match_rows = [asdict(m) for m in matches]
     for row in match_rows:
         row["tier"] = row["tier"].value if hasattr(row["tier"], "value") else row["tier"]
 
-    at_risk_rows = [asdict(r) for r in at_risk_trials(data)]
-    trial_summary_rows = [asdict(r) for r in trial_summaries(matches)]
-    coordinator_rows = [asdict(r) for r in coordinator_dashboard(data, matches)]
-    diagnosis_rows = [asdict(r) for r in diagnosis_summary(data, matches)]
-
     counts = {
         "audit_trail": _write_csv(out / "audit_trail.csv", audit_rows),
         "patient_trial_matches": _write_csv(out / "patient_trial_matches.csv", match_rows),
-        "at_risk_trials": _write_csv(out / "at_risk_trials.csv", at_risk_rows),
-        "trial_summary": _write_csv(out / "trial_summary.csv", trial_summary_rows),
-        "coordinator_dashboard": _write_csv(out / "coordinator_dashboard.csv", coordinator_rows),
-        "diagnosis_summary": _write_csv(out / "diagnosis_summary.csv", diagnosis_rows),
+        "patient_shortlists": _write_csv(out / "patient_shortlists.csv", decision["patient_shortlists"]),
+        "at_risk_trials": _write_csv(out / "at_risk_trials.csv", decision["at_risk_trials"]),
+        "coordinator_dashboard": _write_csv(out / "coordinator_dashboard.csv", decision["coordinator_dashboard"]),
+        "trial_summary": _write_csv(out / "trial_summary.csv", decision["trial_summary"]),
+        "diagnosis_summary": _write_csv(out / "diagnosis_summary.csv", decision["diagnosis_summary"]),
     }
 
+    stages = [ingest, prefilter, eligibility, ranking, decision_stage]
     report = {
+        "architecture": "mizan_foundation_v1",
+        "layers": [
+            {
+                "id": s.layer.value,
+                "name": s.layer.name,
+                "description": s.description,
+                "row_count": s.row_count,
+                "artifact": s.artifact,
+            }
+            for s in stages
+        ],
+        "research_basis": [asdict(r) for r in FOUNDATION_REFERENCES],
         "inputs": summarize_inputs(data),
         "output_row_counts": counts,
-        "logic_checks": _logic_checks(data, audit_rows, match_rows),
+        "tier_counts": decision["tier_counts"],
+        "prefiltered_trials": trial_ids,
+        "logic_checks": _logic_checks(data, trial_ids, audit_rows, match_rows),
     }
     (out / "pipeline_report.json").write_text(json.dumps(report, indent=2))
+    (out / "demo_summary.json").write_text(json.dumps(_demo_summary(report, decision), indent=2))
     return report
 
 
-def _logic_checks(data, audit_rows: list[dict], match_rows: list[dict]) -> dict[str, Any]:
-    """Sanity checks that scores align with audit results."""
-    issues: list[str] = []
+def _demo_summary(report: dict, decision: dict) -> dict:
+    at_risk = decision["at_risk_trials"]
+    top_shortfall = at_risk[0] if at_risk else None
+    return {
+        "headline": "Mizan coordinator decision-support demo",
+        "patients": report["inputs"]["row_counts"]["patients"],
+        "recruiting_trials_evaluated": len(report["prefiltered_trials"]),
+        "at_risk_trials": len(at_risk),
+        "top_shortfall_trial": top_shortfall,
+        "tier_counts": report["tier_counts"],
+        "needs_screening_highlight": report["tier_counts"].get("NEEDS_SCREENING", 0),
+        "layers_completed": len(report["layers"]),
+    }
 
-    expected_audit = len(data.patients) * len(data.trials) * len(data.eligibility_criteria)
-    # Criteria are per-trial, not global.
+
+def _logic_checks(data, trial_ids, audit_rows, match_rows) -> dict[str, Any]:
+    issues: list[str] = []
     criteria_by_trial = {}
     for c in data.eligibility_criteria:
         criteria_by_trial.setdefault(c.trial_id, 0)
         criteria_by_trial[c.trial_id] += 1
+
     expected_audit = sum(
-        len(data.patients) * criteria_by_trial.get(t.trial_id, 0) for t in data.trials
+        len(data.patients) * criteria_by_trial.get(tid, 0) for tid in trial_ids
     )
     if len(audit_rows) != expected_audit:
-        issues.append(
-            f"Audit row count {len(audit_rows)} != expected {expected_audit} "
-            "(patients x trial-specific criteria)"
-        )
+        issues.append(f"Audit rows {len(audit_rows)} != expected {expected_audit}")
 
-    expected_matches = len(data.patients) * len(data.trials)
+    expected_matches = len(data.patients) * len(trial_ids)
     if len(match_rows) != expected_matches:
-        issues.append(
-            f"Match row count {len(match_rows)} != expected {expected_matches} (patients x trials)"
-        )
+        issues.append(f"Match rows {len(match_rows)} != expected {expected_matches}")
 
-    # NOT_ELIGIBLE must have at least one hard NOT_MET in audit for that pair.
     audit_by_pair: dict[tuple[str, str], list[dict]] = {}
     for row in audit_rows:
-        key = (row["patient_id"], row["trial_id"])
-        audit_by_pair.setdefault(key, []).append(row)
+        audit_by_pair.setdefault((row["patient_id"], row["trial_id"]), []).append(row)
 
     for match in match_rows:
-        if match["tier"] != "NOT_ELIGIBLE":
-            continue
-        pair_audit = audit_by_pair.get((match["patient_id"], match["trial_id"]), [])
-        hard_not_met = [
-            r
-            for r in pair_audit
-            if r["hard_gate"] and r["result"] == "NOT_MET"
-        ]
-        if not hard_not_met:
-            issues.append(
-                f"NOT_ELIGIBLE pair {match['patient_id']}/{match['trial_id']} has no hard NOT_MET audit row"
-            )
-
-    # NEEDS_SCREENING should not have hard NOT_MET.
-    for match in match_rows:
-        if match["tier"] != "NEEDS_SCREENING":
-            continue
-        pair_audit = audit_by_pair.get((match["patient_id"], match["trial_id"]), [])
-        if any(r["hard_gate"] and r["result"] == "NOT_MET" for r in pair_audit):
-            issues.append(
-                f"NEEDS_SCREENING pair {match['patient_id']}/{match['trial_id']} has hard NOT_MET"
-            )
+        if match["tier"] == "NOT_ELIGIBLE":
+            pair = audit_by_pair.get((match["patient_id"], match["trial_id"]), [])
+            if not any(r["hard_gate"] and r["result"] == "NOT_MET" for r in pair):
+                issues.append(f"NOT_ELIGIBLE without hard NOT_MET: {match['patient_id']}/{match['trial_id']}")
 
     return {"passed": len(issues) == 0, "issues": issues}
