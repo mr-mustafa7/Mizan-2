@@ -45,6 +45,10 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
     shortlists = patient_shortlists(matches)
     decision, decision_stage = stage_decision_support(data, matches, audit, shortlists)
 
+    from mizan.explanation import build_all_explanations
+
+    explanations = build_all_explanations(data, trial_ids)
+
     audit_rows = [asdict(r) for r in audit]
     match_rows = [asdict(m) for m in matches]
     for row in match_rows:
@@ -61,7 +65,11 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
         "coordinator_dashboard": _write_csv(out / "coordinator_dashboard.csv", decision["coordinator_dashboard"]),
         "trial_summary": _write_csv(out / "trial_summary.csv", decision["trial_summary"]),
         "diagnosis_summary": _write_csv(out / "diagnosis_summary.csv", decision["diagnosis_summary"]),
+        "match_explanations": len(explanations),
     }
+
+    explanation_payload = [e.to_dict() for e in explanations]
+    (out / "match_explanations.json").write_text(json.dumps(explanation_payload, indent=2))
 
     stages = [ingest, prefilter, eligibility, ranking, decision_stage]
     report = {

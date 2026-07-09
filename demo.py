@@ -88,9 +88,31 @@ def main() -> int:
     print()
     checks = report["logic_checks"]
     print(f"Logic checks: {'PASSED' if checks['passed'] else 'FAILED'}")
+
+    _print_sample_explanation(data_dir, report)
+
     print(f"\nOpen {args.output_dir}/coordinator_dashboard.csv for the coordinator view")
-    print(f"Open {args.output_dir}/patient_shortlists.csv for per-patient top-20 trials")
+    print(f"Open {args.output_dir}/match_explanations.json for per-match reasoning")
     return 0 if checks["passed"] else 2
+
+
+def _print_sample_explanation(data_dir, report) -> None:
+    from mizan.explanation import build_match_explanation, render_text
+    from mizan.loader import load_mizan_data
+
+    trials = report.get("prefiltered_trials") or []
+    if not trials:
+        return
+    data = load_mizan_data(data_dir)
+    if not data.patients:
+        return
+    exp = build_match_explanation(data, data.patients[0].patient_id, trials[0])
+    if exp is None:
+        return
+    print("\n" + "-" * 60)
+    print("  Sample reasoning (why this patient matched this trial)")
+    print("-" * 60)
+    print(render_text(exp))
 
 
 if __name__ == "__main__":
