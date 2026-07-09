@@ -1,6 +1,7 @@
 """Mizan foundation architecture — research-backed medtech structure.
 
-Simplified from the TrialMatchAI clinical decision-support pipeline
+Implements the Prometheux Vadalog `criterion_evaluation` + `pair_assessment`
+model, framed with the TrialMatchAI clinical decision-support pipeline
 (Nature Communications, 2026; doi:10.1038/s41467-026-70509-w) and
 deterministic eligibility approaches (MatchMiner, ICH E6 GCP audit).
 
@@ -53,11 +54,11 @@ FOUNDATION_REFERENCES: tuple[ResearchReference, ...] = (
 )
 
 LAYER_DESCRIPTIONS: dict[Layer, str] = {
-    Layer.INGEST: "Load five CSV inputs: patients, facts, criteria, trials, sites.",
-    Layer.PREFILTER: "Fast deterministic filters — recruiting trials, basic trial viability.",
-    Layer.ELIGIBILITY: "Evaluate each criterion: MET / NOT MET / UNKNOWN / NOT APPLICABLE.",
-    Layer.RANKING: "Composite inclusion/exclusion score; classify ELIGIBLE / NEEDS SCREENING / REVIEW / NOT ELIGIBLE.",
-    Layer.DECISION_SUPPORT: "Coordinator dashboards, at-risk trials, patient shortlists, audit trail.",
+    Layer.INGEST: "Load five CSV inputs + patient_data_quality gate (diagnosis + ECOG).",
+    Layer.PREFILTER: "Fast deterministic filters — recruiting trials with supported criteria.",
+    Layer.ELIGIBILITY: "criterion_evaluation: each criterion is MET / NOT_MET / UNKNOWN (missing data never NOT_MET).",
+    Layer.RANKING: "pair_assessment: soft-rule % + location bonus; tier NOT_ELIGIBLE / NEEDS_SCREENING / ELIGIBLE / REVIEW.",
+    Layer.DECISION_SUPPORT: "Coordinator dashboards, at-risk trials, rejection reasons, patient shortlists, audit trail.",
 }
 
 # TrialMatchAI validated top-20 as the clinically practical review window (WIDE cohort, NKI).

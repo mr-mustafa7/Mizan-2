@@ -54,8 +54,8 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
         "patient_data_quality": _write_csv(out / "patient_data_quality.csv", decision["patient_data_quality"]),
         "audit_trail": _write_csv(out / "audit_trail.csv", audit_rows),
         "pair_assessment": _write_csv(out / "pair_assessment.csv", match_rows),
-        "patient_trial_matches": _write_csv(out / "patient_trial_matches.csv", match_rows),
         "rejection_reason": _write_csv(out / "rejection_reason.csv", decision["rejection_reason"]),
+        "criterion_coverage": _write_csv(out / "criterion_coverage.csv", decision["criterion_coverage"]),
         "patient_shortlists": _write_csv(out / "patient_shortlists.csv", decision["patient_shortlists"]),
         "at_risk_trials": _write_csv(out / "at_risk_trials.csv", decision["at_risk_trials"]),
         "coordinator_dashboard": _write_csv(out / "coordinator_dashboard.csv", decision["coordinator_dashboard"]),
@@ -80,6 +80,7 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
         "inputs": summarize_inputs(data),
         "output_row_counts": counts,
         "tier_counts": decision["tier_counts"],
+        "criterion_coverage": _coverage_summary(decision["criterion_coverage"]),
         "prefiltered_trials": trial_ids,
         "logic_checks": _logic_checks(data, trial_ids, audit_rows, match_rows),
     }
@@ -88,17 +89,40 @@ def run_pipeline(data_dir: str | Path, output_dir: str | Path) -> dict[str, Any]
     return report
 
 
+def _coverage_summary(coverage_rows: list[dict]) -> dict[str, Any]:
+    dropped = [r for r in coverage_rows if r["evaluated"] == "NO"]
+    return {
+        "total_criteria": len(coverage_rows),
+        "evaluated": len(coverage_rows) - len(dropped),
+        "dropped": len(dropped),
+        "dropped_criteria": [
+            {
+                "criterion_id": r["criterion_id"],
+                "trial_id": r["trial_id"],
+                "field_checked": r["field_checked"],
+                "note": r["note"],
+            }
+            for r in dropped
+        ],
+    }
+
+
 def _demo_summary(report: dict, decision: dict) -> dict:
     at_risk = decision["at_risk_trials"]
     top_shortfall = at_risk[0] if at_risk else None
+    quality = decision["patient_data_quality"]
+    excluded = [q for q in quality if q["scoreable"] != "YES"]
     return {
         "headline": "Mizan coordinator decision-support demo (Prometheux Vadalog)",
         "patients": report["inputs"]["row_counts"]["patients"],
+        "scoreable_patients": len(quality) - len(excluded),
+        "excluded_patients": len(excluded),
         "recruiting_trials_evaluated": len(report["prefiltered_trials"]),
         "at_risk_trials": len(at_risk),
         "top_shortfall_trial": top_shortfall,
         "tier_counts": report["tier_counts"],
         "needs_screening_highlight": report["tier_counts"].get("NEEDS_SCREENING", 0),
+        "criterion_coverage": report["criterion_coverage"],
         "layers_completed": len(report["layers"]),
     }
 

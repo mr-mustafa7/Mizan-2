@@ -235,6 +235,30 @@ def evaluate_criterion(
     return None
 
 
+def unsupported_reason(criterion: EligibilityCriterion) -> str:
+    """Human-readable reason a criterion is outside the Vadalog evaluator scope."""
+    field = criterion.field_checked.lower()
+    op = criterion.operator.lower()
+    pol = criterion.rule_type.lower()
+    if field == "age" and pol == "exclusion":
+        return "age exclusion not modelled in criterion_evaluation"
+    if field == "ecog" and (op != "le" or pol != "inclusion"):
+        return "only ecog/le inclusion is modelled"
+    if field.startswith("lab_") or field in {
+        "hemoglobin",
+        "platelet_count",
+        "anc",
+        "creatinine",
+        "bilirubin",
+        "alt",
+        "ast",
+    }:
+        return "lab thresholds not modelled in criterion_evaluation"
+    if field == "sex":
+        return "sex criteria not modelled in criterion_evaluation"
+    return f"no evaluator for field '{criterion.field_checked}' / {op} / {pol}"
+
+
 def build_criterion_evaluation(
     data: MizanData, trial_ids: list[str] | None = None
 ) -> list[tuple[EligibilityCriterion, str, EvaluationOutcome]]:

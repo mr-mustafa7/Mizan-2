@@ -16,6 +16,7 @@ from mizan.matcher import (
     AuditRecord,
     PatientTrialMatch,
     build_audit_trail,
+    build_criterion_coverage,
     build_rejection_reasons,
     match_all,
 )
@@ -140,6 +141,8 @@ def stage_decision_support(
     """Coordinator-facing outputs."""
     quality = build_patient_data_quality(data)
     rejections = build_rejection_reasons(matches, audit)
+    active_trials = sorted({m.trial_id for m in matches})
+    coverage = build_criterion_coverage(data, active_trials)
     payload = {
         "patient_data_quality": [asdict(r) for r in quality],
         "at_risk_trials": [asdict(r) for r in at_risk_trials(data)],
@@ -147,6 +150,7 @@ def stage_decision_support(
         "trial_summary": [asdict(r) for r in trial_summaries(matches)],
         "diagnosis_summary": [asdict(r) for r in diagnosis_summary(data, matches)],
         "rejection_reason": [asdict(r) for r in rejections],
+        "criterion_coverage": [asdict(r) for r in coverage],
         "patient_shortlists": [asdict(r) for r in shortlists],
         "tier_counts": _tier_counts(matches),
     }
@@ -159,6 +163,7 @@ def stage_decision_support(
             "trial_summary",
             "diagnosis_summary",
             "rejection_reason",
+            "criterion_coverage",
             "patient_shortlists",
         )
     )

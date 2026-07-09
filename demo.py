@@ -69,9 +69,10 @@ def main() -> int:
     print()
     print("Key demo metrics:")
     print(f"  Patients:                  {demo['patients']}")
+    print(f"  Scoreable / excluded:      {demo['scoreable_patients']} / {demo['excluded_patients']}")
     print(f"  Recruiting trials matched: {demo['recruiting_trials_evaluated']}")
     print(f"  At-risk trials:            {demo['at_risk_trials']}")
-    print(f"  Needs screening (recruit):   {demo['needs_screening_highlight']}")
+    print(f"  Needs screening:           {demo['needs_screening_highlight']}")
     if demo.get("top_shortfall_trial"):
         t = demo["top_shortfall_trial"]
         print(f"  Biggest shortfall:         {t['title']} ({t['shortfall']} patients needed)")
@@ -79,6 +80,11 @@ def main() -> int:
     print("Tier breakdown:")
     for tier, count in demo["tier_counts"].items():
         print(f"  {tier}: {count}")
+    print()
+    cov = demo["criterion_coverage"]
+    print(f"Criterion coverage: {cov['evaluated']}/{cov['total_criteria']} evaluated, {cov['dropped']} dropped")
+    for d in cov["dropped_criteria"]:
+        print(f"  - {d['criterion_id']} ({d['trial_id']}, {d['field_checked']}): {d['note']}")
     print()
     checks = report["logic_checks"]
     print(f"Logic checks: {'PASSED' if checks['passed'] else 'FAILED'}")

@@ -5,7 +5,14 @@ from __future__ import annotations
 from dataclasses import dataclass
 from enum import Enum
 
-from mizan.evaluator import CriterionResult, EvaluationOutcome, build_criterion_evaluation, evaluate_criterion
+from mizan.evaluator import (
+    CriterionResult,
+    EvaluationOutcome,
+    build_criterion_evaluation,
+    evaluate_criterion,
+    is_supported_criterion,
+    unsupported_reason,
+)
 from mizan.loader import EligibilityCriterion, MizanData, Patient
 
 
@@ -69,6 +76,19 @@ class RejectionReason:
     field_checked: str
     hard_gate: bool
     reason: str
+
+
+@dataclass(frozen=True)
+class CriterionCoverageRow:
+    criterion_id: str
+    trial_id: str
+    rule_type: str
+    field_checked: str
+    operator: str
+    value: str
+    hard_gate: bool
+    evaluated: str
+    note: str
 
 
 def _criteria_for_trial(data: MizanData, trial_id: str) -> list[EligibilityCriterion]:
@@ -244,6 +264,33 @@ def match_all(
                 matches.append(match)
     matches.sort(key=lambda m: (m.trial_id, -m.score, m.patient_id))
     return audit, matches
+
+
+def build_criterion_coverage(
+    data: MizanData, trial_ids: list[str] | None = None
+) -> list[CriterionCoverageRow]:
+    """Report every criterion as evaluated (YES) or dropped (NO), so nothing is silent."""
+    active = set(trial_ids) if trial_ids else {t.trial_id for t in data.trials}
+    rows: list[CriterionCoverageRow] = []
+    for criterion in data.eligibility_criteria:
+        if criterion.trial_id not in active:
+            continue
+        supported = is_supported_criterion(criterion)
+        rows.append(
+            CriterionCoverageRow(
+                criterion_id=criterion.criterion_id,
+                trial_id=criterion.trial_id,
+                rule_type=criterion.rule_type,
+                field_checked=criterion.field_checked,
+                operator=criterion.operator,
+                value=criterion.value,
+                hard_gate=criterion.hard_gate,
+                evaluated="YES" if supported else "NO",
+                note="" if supported else unsupported_reason(criterion),
+            )
+        )
+    rows.sort(key=lambda r: (r.trial_id, r.criterion_id))
+    return rows
 
 
 def build_rejection_reasons(matches: list[PatientTrialMatch], audit: list[AuditRecord]) -> list[RejectionReason]:
