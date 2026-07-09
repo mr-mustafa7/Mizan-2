@@ -12,7 +12,15 @@ python3 demo.py
 python3 demo.py --show-architecture   # print the five-layer map
 ```
 
-Outputs land in `output/` including `coordinator_dashboard.csv`, `patient_shortlists.csv`, and `demo_summary.json`.
+Outputs land in `output/`: `patient_data_quality.csv`, `pair_assessment.csv`, `audit_trail.csv`,
+`rejection_reason.csv`, `criterion_coverage.csv` (which criteria were evaluated vs dropped),
+`coordinator_dashboard.csv`, `trial_summary.csv`, `diagnosis_summary.csv`, `patient_shortlists.csv`,
+and `demo_summary.json`.
+
+> **Coverage transparency:** the Python engine only evaluates the field/operator/polarity
+> combinations defined in `prometheux/mizan.vada`. Any other criterion (e.g. lab thresholds,
+> age exclusions) is reported in `criterion_coverage.csv` as `evaluated=NO` with a reason — never
+> silently ignored.
 
 ## Foundation architecture
 
@@ -48,10 +56,9 @@ Place five CSV files in `data/` or Prometheux-style `disk/`:
 mizan/
   architecture.py   # Layer definitions + research citations
   stages.py         # Five pipeline stages
-  scoring.py        # Composite inclusion/exclusion score
   loader.py         # CSV ingest
-  evaluator.py      # criterion_evaluation (Prometheux Vadalog)
-  matcher.py        # pair_assessment tiers + audit trail
+  evaluator.py      # criterion_evaluation + criterion coverage (Prometheux Vadalog)
+  matcher.py        # pair_assessment tiers, audit trail, rejection reasons
   quality.py        # patient_data_quality gate
   dashboards.py     # Coordinator views
   pipeline.py       # Orchestrator

@@ -25,7 +25,10 @@ class FoundationTests(unittest.TestCase):
         quality = build_patient_data_quality(data)
         self.assertEqual(len(quality), len(data.patients))
         scoreable = [q for q in quality if q.scoreable == "YES"]
+        excluded = [q for q in quality if q.scoreable != "YES"]
         self.assertGreater(len(scoreable), 0)
+        # Sample data includes patients missing ecog / diagnosis.
+        self.assertGreater(len(excluded), 0)
 
     def test_lab_criterion_not_in_vadalog(self) -> None:
         criterion = EligibilityCriterion(

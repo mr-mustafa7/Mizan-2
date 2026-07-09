@@ -44,3 +44,14 @@ P008,F042,ecog,3,,,false,high,clinic_note
 P008,F043,cancer_stage,,Stage IV,,false,high,imaging
 P008,F044,biomarker_egfr,,wild type,,false,high,molecular
 P008,F045,prior_treatments,,osimertinib,,false,high,onc_history
+P009,F046,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P009,F047,ecog,1,,,false,high,clinic_note
+P009,F048,cancer_stage,,Stage IIIA,,false,high,imaging
+P009,F049,prior_treatments,,none,,false,high,onc_history
+P010,F050,diagnosis,,NSCLC adenocarcinoma,,false,high,pathology
+P010,F051,cancer_stage,,Stage IIB,,false,high,imaging
+P010,F052,biomarker_egfr,,exon 19 deletion,,false,high,molecular
+P010,F053,prior_treatments,,none,,false,high,onc_history
+P011,F054,ecog,1,,,false,high,clinic_note
+P011,F055,biomarker_egfr,,L858R mutation,,false,high,molecular
+P011,F056,prior_treatments,,none,,false,high,onc_history
